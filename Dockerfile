@@ -10,6 +10,20 @@ RUN pip install -U xformers==0.0.31.post1 --index-url https://download.pytorch.o
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
 
+# ---------------- Comfy custom nodes ------------
+WORKDIR /comfyui
+RUN comfy-node-install \
+        ComfyUI-WAN \
+        ComfyUI_essentials \
+        ComfyUI-VideoHelperSuite \
+        ComfyUI_IPAdapter_plus \
+        ComfyUI-WanStartEndFramesNative \
+    && ls -la /comfyui/custom_nodes/ \
+    && echo "Проверяем установленные custom nodes:" \
+    && ls -la /comfyui/custom_nodes/ComfyUI-VideoHelperSuite/ || echo "VideoHelperSuite не найден!" \
+    && ls -la /comfyui/custom_nodes/ComfyUI-WAN/ || echo "ComfyUI-WAN не найден!" \
+    && ls -la /comfyui/custom_nodes/ComfyUI_essentials/ || echo "ComfyUI_essentials не найден!"
+
 # Копируем handler и зависимости
 COPY rp_handler.py /
 COPY requirements.txt /
