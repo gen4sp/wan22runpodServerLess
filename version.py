@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Управление версиями для WAN 2.2 RunPod Worker."""
 
-__version__ = "1.0.0"
-__version_info__ = tuple(map(int, __version__.split(".")))
+__version__ = "1.0.1"
+__version_info__ = (1, 0, 1)
 
 def get_version():
     """Возвращает текущую версию."""
