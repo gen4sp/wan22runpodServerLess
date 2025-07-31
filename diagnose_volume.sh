@@ -39,6 +39,31 @@ find /comfyui -name "*.safetensors" -type f 2>/dev/null | while read file; do
     echo "✅ $file ($size)"
 done
 
+# Проверяем custom nodes
+echo ""
+echo "🔌 Проверка custom nodes:"
+if [ -d "/comfyui/custom_nodes" ]; then
+    echo "✅ Папка custom_nodes существует"
+    custom_nodes=(
+        "ComfyUI_essentials"
+        "ComfyUI-VideoHelperSuite" 
+        "ComfyUI-WAN"
+        "ComfyUI-WanStartEndFramesNative"
+        "ComfyUI_IPAdapter_plus"
+    )
+    
+    for node in "${custom_nodes[@]}"; do
+        if [ -d "/comfyui/custom_nodes/$node" ]; then
+            echo "  ✅ $node установлен"
+        else
+            echo "  ❌ $node отсутствует"
+        fi
+    done
+else
+    echo "❌ Папка custom_nodes не найдена!"
+    echo "   Это означает что volume полностью перезаписал ComfyUI"
+fi
+
 # Проверяем конкретные требуемые файлы
 echo ""
 echo "🎯 Проверка требуемых моделей:"
@@ -81,11 +106,21 @@ if [ "$models_in_volume" -gt 0 ] && [ "$models_in_comfyui" -eq 0 ]; then
     echo "      /runpod-volume/ComfyUI/models/vae/"
     echo "      /runpod-volume/ComfyUI/models/clip/"
     echo "      /runpod-volume/ComfyUI/models/loras/wan/"
+    echo "   3. Перезапустите контейнер после исправления структуры"
 elif [ "$models_in_volume" -eq 0 ]; then
     echo "❌ Модели не найдены в volume"
     echo "   Загрузите модели в Volume через RunPod интерфейс"
 elif [ "$models_in_comfyui" -gt 0 ]; then
     echo "✅ Модели успешно подключены!"
+fi
+
+# Проверка custom nodes
+if [ ! -d "/comfyui/custom_nodes" ] || [ -z "$(ls -A /comfyui/custom_nodes 2>/dev/null)" ]; then
+    echo ""
+    echo "❌ КРИТИЧЕСКАЯ ПРОБЛЕМА: Custom nodes отсутствуют!"
+    echo "   Это означает что volume неправильно подключен и перезаписал ComfyUI"
+    echo "   Решение: исправьте логику подключения volume в startup.sh"
+    echo "   Volume должен линковаться ТОЛЬКО на /comfyui/models, а не на всю папку /comfyui"
 fi
 
 # Показываем права доступа

@@ -5,40 +5,53 @@
 
 echo "🚀 Запуск WAN 2.2 ServerLess Worker..."
 
-# Создаем символические ссылки для volume
+# Создаем символические ссылки для volume (только для моделей!)
 echo "📁 Настройка volume..."
 
-# Проверяем различные возможные структуры volume
-if [ -d "/runpod-volume/ComfyUI" ]; then
-    echo "✅ Найден volume: /runpod-volume/ComfyUI"
-    ln -sfn /runpod-volume/ComfyUI /comfyui
-    echo "✅ Volume подключен: /runpod-volume/ComfyUI -> /comfyui"
+# Создаем базовые директории ComfyUI (НЕ перезаписываем custom_nodes!)
+mkdir -p /comfyui/{input,output,models/{unet,vae,clip,loras/wan}}
+
+# Проверяем различные возможные структуры volume и линкуем ТОЛЬКО модели
+if [ -d "/runpod-volume/ComfyUI/models" ]; then
+    echo "✅ Найден volume: /runpod-volume/ComfyUI/models"
+    # Удаляем пустую папку models и создаем ссылку
+    rm -rf /comfyui/models
+    ln -sfn /runpod-volume/ComfyUI/models /comfyui/models
+    echo "✅ Модели подключены: /runpod-volume/ComfyUI/models -> /comfyui/models"
 elif [ -d "/runpod-volume/models" ]; then
     echo "✅ Найден volume с моделями: /runpod-volume/models"
-    mkdir -p /comfyui
+    # Удаляем пустую папку models и создаем ссылку
+    rm -rf /comfyui/models
     ln -sfn /runpod-volume/models /comfyui/models
     echo "✅ Модели подключены: /runpod-volume/models -> /comfyui/models"
 elif [ -d "/runpod-volume" ] && [ "$(ls -A /runpod-volume 2>/dev/null)" ]; then
     echo "✅ Найден volume: /runpod-volume (содержимое: $(ls /runpod-volume | head -5 | tr '\n' ' '))"
-    mkdir -p /comfyui
-    # Пытаемся найти модели в volume
+    # Проверяем наличие папок с моделями в корне volume
     if [ -d "/runpod-volume/unet" ] || [ -d "/runpod-volume/vae" ] || [ -d "/runpod-volume/clip" ]; then
         echo "✅ Найдена структура моделей в корне volume"
+        # Удаляем пустую папку models и создаем ссылку на весь volume как models
+        rm -rf /comfyui/models
         ln -sfn /runpod-volume /comfyui/models
+        echo "✅ Модели подключены: /runpod-volume -> /comfyui/models"
     else
         echo "⚠️  Volume подключен, но структура папок неизвестна"
         ls -la /runpod-volume/ || echo "Не удалось прочитать содержимое volume"
     fi
 else
     echo "⚠️  Volume не найден или пуст, используем локальную установку"
-    mkdir -p /comfyui
 fi
-
-# Создаем необходимые директории
-mkdir -p /comfyui/{input,output,models/{unet,vae,clip,loras/wan},custom_nodes}
 
 # Проверяем наличие критически важных файлов
 echo "🔍 Проверка моделей..."
+
+# Проверяем что custom nodes сохранились
+echo "🔌 Проверка custom nodes:"
+if [ -d "/comfyui/custom_nodes" ]; then
+    echo "✅ Custom nodes найдены:"
+    ls -la /comfyui/custom_nodes/ | grep -E "(ComfyUI_essentials|ComfyUI-VideoHelperSuite|ComfyUI-WAN)" || echo "   Основные custom nodes могут отсутствовать"
+else
+    echo "❌ Custom nodes не найдены! Проблема с volume linking"
+fi
 
 # Показываем текущую структуру папок
 echo "📂 Структура /comfyui:"
