@@ -157,29 +157,76 @@ docker push your-dockerhub-username/wan22-worker:latest
 
 ## Устранение неполадок
 
+### Диагностика проблем с моделями
+
+Если сервер не видит модели, используйте диагностический скрипт:
+
+```bash
+# В контейнере RunPod
+bash diagnose_volume.sh
+```
+
+Скрипт покажет:
+- Где находятся модели
+- Правильно ли подключен volume
+- Какие файлы отсутствуют
+- Рекомендации по исправлению
+
+### Правильная структура Volume
+
+Volume должен быть подключен как `/runpod-volume` с одной из структур:
+
+**Вариант 1 (рекомендуется):**
+```
+/runpod-volume/ComfyUI/models/
+├── unet/
+│   ├── wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors
+│   └── wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors
+├── vae/
+│   └── wan_2.1_vae.safetensors
+├── clip/
+│   └── umt5_xxl_fp8_e4m3fn_scaled.safetensors
+└── loras/wan/
+    └── Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors
+```
+
+**Вариант 2:**
+```
+/runpod-volume/models/
+├── unet/...
+├── vae/...
+└── ...
+```
+
 ### Частые ошибки:
 
-1. **"Could not find a version that satisfies the requirement xformers"**
+1. **"❌ Отсутствуют критически важные файлы"**
+
+    - Проверьте подключение Volume в настройках Endpoint
+    - Убедитесь что Volume Mount Point = `/runpod-volume`
+    - Запустите `bash diagnose_volume.sh` для диагностики
+
+2. **"Could not find a version that satisfies the requirement xformers"**
 
     - Исправлено в последней версии Dockerfile
     - Используется fallback установка из PyPI если PyTorch индекс недоступен
 
-2. **"ComfyUI API недоступен"**
+3. **"ComfyUI API недоступен"**
 
     - Проверьте, что ComfyUI запущен
     - Увеличьте timeout в wait_for_comfy()
 
-3. **"Value not in list ... wan\\Wan21*T2V*\*"**
+4. **"Value not in list ... wan\\Wan21*T2V*\*"**
 
     - Проверьте пути к LoRA файлам
     - Убедитесь что LoRA подключена к обоим UNet'ам
 
-4. **"CUDA error: no kernel image"**
+5. **"CUDA error: no kernel image"**
 
     - Используйте только RTX 5090
     - Проверьте установку torch 2.8.0 + cu128
 
-5. **OOM ошибки**
+6. **OOM ошибки**
     - Уменьшите разрешение или количество кадров
     - Проверьте включение torch.compile
 
@@ -191,6 +238,9 @@ docker logs <container_id>
 
 # Логи ComfyUI
 tail -f /comfyui/comfyui.log
+
+# Диагностика volume
+bash diagnose_volume.sh
 ```
 
 ## Поддерживаемые форматы

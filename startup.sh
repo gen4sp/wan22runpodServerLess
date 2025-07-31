@@ -7,11 +7,30 @@ echo "🚀 Запуск WAN 2.2 ServerLess Worker..."
 
 # Создаем символические ссылки для volume
 echo "📁 Настройка volume..."
+
+# Проверяем различные возможные структуры volume
 if [ -d "/runpod-volume/ComfyUI" ]; then
+    echo "✅ Найден volume: /runpod-volume/ComfyUI"
     ln -sfn /runpod-volume/ComfyUI /comfyui
     echo "✅ Volume подключен: /runpod-volume/ComfyUI -> /comfyui"
+elif [ -d "/runpod-volume/models" ]; then
+    echo "✅ Найден volume с моделями: /runpod-volume/models"
+    mkdir -p /comfyui
+    ln -sfn /runpod-volume/models /comfyui/models
+    echo "✅ Модели подключены: /runpod-volume/models -> /comfyui/models"
+elif [ -d "/runpod-volume" ] && [ "$(ls -A /runpod-volume 2>/dev/null)" ]; then
+    echo "✅ Найден volume: /runpod-volume (содержимое: $(ls /runpod-volume | head -5 | tr '\n' ' '))"
+    mkdir -p /comfyui
+    # Пытаемся найти модели в volume
+    if [ -d "/runpod-volume/unet" ] || [ -d "/runpod-volume/vae" ] || [ -d "/runpod-volume/clip" ]; then
+        echo "✅ Найдена структура моделей в корне volume"
+        ln -sfn /runpod-volume /comfyui/models
+    else
+        echo "⚠️  Volume подключен, но структура папок неизвестна"
+        ls -la /runpod-volume/ || echo "Не удалось прочитать содержимое volume"
+    fi
 else
-    echo "⚠️  Volume не найден, используем локальную установку"
+    echo "⚠️  Volume не найден или пуст, используем локальную установку"
     mkdir -p /comfyui
 fi
 
@@ -20,6 +39,15 @@ mkdir -p /comfyui/{input,output,models/{unet,vae,clip,loras/wan},custom_nodes}
 
 # Проверяем наличие критически важных файлов
 echo "🔍 Проверка моделей..."
+
+# Показываем текущую структуру папок
+echo "📂 Структура /comfyui:"
+ls -la /comfyui/ 2>/dev/null || echo "   /comfyui не существует"
+if [ -d "/comfyui/models" ]; then
+    echo "📂 Структура /comfyui/models:"
+    find /comfyui/models -type f -name "*.safetensors" 2>/dev/null | head -10 || echo "   Модели .safetensors не найдены"
+fi
+
 required_files=(
     "/comfyui/models/unet/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"
     "/comfyui/models/unet/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"
@@ -29,11 +57,19 @@ required_files=(
 )
 
 missing_files=()
+found_files=()
 for file in "${required_files[@]}"; do
-    if [ ! -f "$file" ]; then
+    if [ -f "$file" ]; then
+        found_files+=("$file")
+        echo "✅ Найден: $file"
+    else
         missing_files+=("$file")
     fi
 done
+
+if [ ${#found_files[@]} -gt 0 ]; then
+    echo "✅ Найдено моделей: ${#found_files[@]}/${#required_files[@]}"
+fi
 
 if [ ${#missing_files[@]} -ne 0 ]; then
     echo "❌ Отсутствуют критически важные файлы:"
@@ -41,11 +77,21 @@ if [ ${#missing_files[@]} -ne 0 ]; then
         echo "   - $file"
     done
     echo ""
-    echo "📋 Инструкция по загрузке моделей:"
-    echo "1. Создайте Volume в RunPod"
-    echo "2. Загрузите модели в соответствующие папки"
-    echo "3. Подключите Volume при создании Endpoint"
+    echo "🔍 Диагностика volume:"
+    echo "   Volume mount point: /runpod-volume"
+    if [ -d "/runpod-volume" ]; then
+        echo "   Volume содержимое:"
+        find /runpod-volume -name "*.safetensors" 2>/dev/null | head -10 || echo "     Файлы .safetensors не найдены в volume"
+    fi
     echo ""
+    echo "📋 Инструкция по исправлению:"
+    echo "1. Проверьте что Volume подключен как /runpod-volume"
+    echo "2. Структура должна быть: /runpod-volume/ComfyUI/models/..."
+    echo "3. Либо /runpod-volume/models/..."
+    echo "4. Перезапустите контейнер после исправления"
+    echo ""
+else
+    echo "🎉 Все необходимые модели найдены!"
 fi
 
 # Фикс для torchvision ошибки (из error.md)

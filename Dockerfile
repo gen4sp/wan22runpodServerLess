@@ -64,9 +64,10 @@ ENV TORCH_CUDA_ARCH_LIST="9.0"
 # Устанавливаем рабочую директорию
 WORKDIR /
 
-# Копируем startup скрипт
+# Копируем startup скрипт и диагностику
 COPY startup.sh /startup.sh
-RUN chmod +x /startup.sh
+COPY diagnose_volume.sh /diagnose_volume.sh
+RUN chmod +x /startup.sh /diagnose_volume.sh
 
 # Команда запуска через startup скрипт
 CMD ["/startup.sh"]
