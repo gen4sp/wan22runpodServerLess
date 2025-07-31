@@ -2,6 +2,23 @@
 
 Серверлесс воркер для генерации видео из изображений с помощью WAN 2.2 на RunPod с RTX 5090.
 
+> **\* Примечание про PyTorch 2.8.0:** Официально PyTorch 2.8.0 пока не выпущен, и нужно использовать RC-сборку из тестового репозитория:
+>
+> Для CUDA 12.8:
+>
+> ```bash
+> pip3 install torch==2.8.0 torchvision torchaudio \
+>        --index-url https://download.pytorch.org/whl/test/cu128
+> ```
+>
+> Для CPU:
+>
+> ```bash
+> pip3 install torch==2.8.0 --index-url https://download.pytorch.org/whl/test/cpu
+> ```
+>
+> или использовать образ RunPod nightly/RC 2.8.0.
+
 ## Особенности
 
 -   ⚡ Быстрая генерация (~60 секунд на RTX 5090)
@@ -101,51 +118,6 @@ docker push your-dockerhub-username/wan22-worker:latest
 }
 ```
 
-## Примеры использования
-
-### Python
-
-```python
-import requests
-import base64
-
-# Кодируем изображение
-with open("input.jpg", "rb") as f:
-    image_b64 = base64.b64encode(f.read()).decode()
-
-data = {
-    "input": {
-        "prompt": "A majestic eagle soaring through clouds",
-        "image": f"data:image/jpeg;base64,{image_b64}",
-        "options": {
-            "width": 832,
-            "height": 832,
-            "length": 81
-        }
-    }
-}
-
-response = requests.post("https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync",
-                        json=data,
-                        headers={"Authorization": "Bearer YOUR_API_KEY"})
-
-result = response.json()
-if "output" in result:
-    # Декодируем видео
-    video_data = base64.b64decode(result["output"]["video"])
-    with open("output.mp4", "wb") as f:
-        f.write(video_data)
-```
-
-### cURL
-
-```bash
-curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d @test_input.json
-```
-
 ## Оптимизация производительности
 
 ### Рекомендуемые настройки:
@@ -205,7 +177,7 @@ tail -f /comfyui/comfyui.log
 ## Версии
 
 -   **ComfyUI**: 0.3.46
--   **PyTorch**: 2.8.0
+-   **PyTorch**: 2.8.0\*
 -   **xformers**: 0.0.31.post1
 -   **CUDA**: 12.8
 -   **WAN**: 2.2 (14B fp8)

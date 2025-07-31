@@ -2,10 +2,10 @@ FROM runpod/worker-comfyui:5.3.0-base
 
 # Обновляем PyTorch и xformers для поддержки RTX 5090 (sm_90)
 RUN pip install --force-reinstall \
-    --index-url https://download.pytorch.org/whl/cu128 \
-    torch==2.8.0 torchvision==0.19.0 torchaudio==2.3.0
+    --index-url https://download.pytorch.org/whl/test/cu128 \
+    torch==2.8.0 torchvision torchaudio
 
-RUN pip install -U xformers==0.0.31.post1 --index-url https://download.pytorch.org/whl/cu128
+RUN pip install -U xformers==0.0.31.post1 --index-url https://download.pytorch.org/whl/test/cu128
 
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
