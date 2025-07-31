@@ -1,4 +1,4 @@
-t-==
+python3 release.py patch
 
 # WAN 2.2 Image-to-Video RunPod ServerLess Worker
 

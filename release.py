@@ -60,7 +60,7 @@ def update_version_file(new_version):
     # Обновляем версию инфо
     version_info = ', '.join(new_version.split('.'))
     content = re.sub(
-        r'__version_info__ = tuple\(map\(int, __version__\.split\("\.")\)\)',
+        r'__version_info__ = tuple\(map\(int, __version__\.split\("\."\)\)\)',
         f'__version_info__ = ({version_info})',
         content
     )
