@@ -1,5 +1,7 @@
 python3 release.py patch
 
+---
+
 # WAN 2.2 Image-to-Video RunPod ServerLess Worker
 
 Серверлесс воркер для генерации видео из изображений с помощью WAN 2.2 на RunPod с RTX 5090.
