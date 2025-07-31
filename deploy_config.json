@@ -1,7 +1,7 @@
 {
     "name": "wan22-i2v-worker",
     "description": "WAN 2.2 Image-to-Video Generation Worker optimized for RTX 5090",
-    "dockerImage": "your-dockerhub-username/wan22-worker:latest",
+    "dockerImage": "your-dockerhub-username/wan22-worker:v1.0.0",
     "gpuTypeId": "NVIDIA_GEFORCE_RTX_5090",
     "containerDiskInGb": 50,
     "volumeMounts": [
