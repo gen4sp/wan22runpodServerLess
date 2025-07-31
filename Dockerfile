@@ -15,7 +15,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем xformers для поддержки RTX 5090 (sm_90)
-RUN pip install -U xformers==0.0.31.post1 --index-url https://download.pytorch.org/whl/test/cu128
+# Сначала пробуем установить из PyTorch индекса для CUDA 12.8
+RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu128 || \
+    # Если не получилось, устанавливаем из основного PyPI
+    pip install -U xformers
 
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation

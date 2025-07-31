@@ -140,22 +140,27 @@ docker push your-dockerhub-username/wan22-worker:latest
 
 ### Частые ошибки:
 
-1. **"ComfyUI API недоступен"**
+1. **"Could not find a version that satisfies the requirement xformers"**
+
+    - Исправлено в последней версии Dockerfile
+    - Используется fallback установка из PyPI если PyTorch индекс недоступен
+
+2. **"ComfyUI API недоступен"**
 
     - Проверьте, что ComfyUI запущен
     - Увеличьте timeout в wait_for_comfy()
 
-2. **"Value not in list ... wan\\Wan21*T2V*\*"**
+3. **"Value not in list ... wan\\Wan21*T2V*\*"**
 
     - Проверьте пути к LoRA файлам
     - Убедитесь что LoRA подключена к обоим UNet'ам
 
-3. **"CUDA error: no kernel image"**
+4. **"CUDA error: no kernel image"**
 
     - Используйте только RTX 5090
     - Проверьте установку torch 2.8.0 + cu128
 
-4. **OOM ошибки**
+5. **OOM ошибки**
     - Уменьшите разрешение или количество кадров
     - Проверьте включение torch.compile
 
@@ -180,9 +185,11 @@ tail -f /comfyui/comfyui.log
 
 -   **ComfyUI**: 0.3.46
 -   **PyTorch**: 2.8.0\*
--   **xformers**: 0.0.31.post1
+-   **xformers**: 0.0.31.post1+ (auto-selected)
 -   **CUDA**: 12.8
 -   **WAN**: 2.2 (14B fp8)
+
+> **Примечание**: xformers устанавливается автоматически из доступного источника (PyTorch CUDA индекс или PyPI)
 
 ## Лицензия
 
