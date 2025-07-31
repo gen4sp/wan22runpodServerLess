@@ -1,24 +1,50 @@
-FROM runpod/worker-comfyui:5.3.0-base
+FROM runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04
 
-# Обновляем PyTorch и xformers для поддержки RTX 5090 (sm_90)
-RUN pip install --force-reinstall \
-    --index-url https://download.pytorch.org/whl/test/cu128 \
-    torch==2.8.0 torchvision torchaudio
+# Обновляем систему и устанавливаем необходимые зависимости
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    wget \
+    curl \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
+# Устанавливаем xformers для поддержки RTX 5090 (sm_90)
 RUN pip install -U xformers==0.0.31.post1 --index-url https://download.pytorch.org/whl/test/cu128
 
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
 
-# ---------------- Comfy custom nodes ------------
+# Клонируем и устанавливаем ComfyUI
+WORKDIR /
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
+
+# Устанавливаем зависимости ComfyUI
 WORKDIR /comfyui
-RUN comfy-node-install \
-        ComfyUI-WAN \
-        ComfyUI_essentials \
-        ComfyUI-VideoHelperSuite \
-        ComfyUI_IPAdapter_plus \
-        ComfyUI-WanStartEndFramesNative \
-    && ls -la /comfyui/custom_nodes/ \
+RUN pip install -r requirements.txt
+
+# Устанавливаем ComfyUI Manager для управления custom nodes
+RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
+
+# Устанавливаем необходимые custom nodes
+RUN git clone https://github.com/Wan22RunPod/ComfyUI-WAN.git /comfyui/custom_nodes/ComfyUI-WAN \
+    && git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
+    && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /comfyui/custom_nodes/ComfyUI-VideoHelperSuite \
+    && git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git /comfyui/custom_nodes/ComfyUI_IPAdapter_plus \
+    && git clone https://github.com/Wan22RunPod/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
+
+# Устанавливаем зависимости для custom nodes
+RUN cd /comfyui/custom_nodes/ComfyUI_essentials && pip install -r requirements.txt || true
+RUN cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && pip install -r requirements.txt || true
+RUN cd /comfyui/custom_nodes/ComfyUI_IPAdapter_plus && pip install -r requirements.txt || true
+
+# Проверяем установленные custom nodes
+RUN ls -la /comfyui/custom_nodes/ \
     && echo "Проверяем установленные custom nodes:" \
     && ls -la /comfyui/custom_nodes/ComfyUI-VideoHelperSuite/ || echo "VideoHelperSuite не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI-WAN/ || echo "ComfyUI-WAN не найден!" \
