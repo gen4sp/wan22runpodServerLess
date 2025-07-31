@@ -1,0 +1,34 @@
+{
+    "name": "wan22-i2v-worker",
+    "description": "WAN 2.2 Image-to-Video Generation Worker optimized for RTX 5090",
+    "dockerImage": "your-dockerhub-username/wan22-worker:latest",
+    "gpuTypeId": "NVIDIA_GEFORCE_RTX_5090",
+    "containerDiskInGb": 50,
+    "volumeMounts": [
+        {
+            "name": "comfy-models-volume",
+            "mountPath": "/runpod-volume"
+        }
+    ],
+    "env": [
+        {
+            "key": "TORCH_COMPILE",
+            "value": "1"
+        },
+        {
+            "key": "TORCH_CUDA_ARCH_LIST",
+            "value": "9.0"
+        },
+        {
+            "key": "PYTORCH_CUDA_ALLOC_CONF",
+            "value": "max_split_size_mb:512"
+        }
+    ],
+    "ports": "8188/http",
+    "scalerType": "QUEUE_DELAY",
+    "scalerValue": 4,
+    "workersMin": 0,
+    "workersMax": 3,
+    "idleTimeout": 5,
+    "flashBoot": false
+}

@@ -1,0 +1,15 @@
+{
+    "input": {
+        "prompt": "A beautiful cat walking in a garden, cinematic lighting, high quality",
+        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=",
+        "options": {
+            "width": 832,
+            "height": 832,
+            "length": 81,
+            "steps": 6,
+            "cfg": 1.0,
+            "frame_rate": 24,
+            "seed": 123456
+        }
+    }
+}
