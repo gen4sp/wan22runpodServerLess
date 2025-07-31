@@ -35,11 +35,10 @@ RUN pip install -r requirements.txt
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
 
 # Устанавливаем необходимые custom nodes
-RUN git clone https://github.com/Wan22RunPod/ComfyUI-WAN.git /comfyui/custom_nodes/ComfyUI-WAN \
-    && git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
+RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
     && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /comfyui/custom_nodes/ComfyUI-VideoHelperSuite \
     && git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git /comfyui/custom_nodes/ComfyUI_IPAdapter_plus \
-    && git clone https://github.com/Wan22RunPod/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
+    && git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
 
 # Устанавливаем зависимости для custom nodes
 RUN cd /comfyui/custom_nodes/ComfyUI_essentials && pip install -r requirements.txt || true
