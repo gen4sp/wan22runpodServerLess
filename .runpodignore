@@ -1,0 +1,21 @@
+# Git files
+.git/
+.gitignore
+
+# Documentation
+docs/
+README.md
+CHANGELOG.md
+
+# Development files
+example_usage.py
+test_input.json
+setup_project.py
+
+# Build files
+Makefile
+release.py
+version.py
+
+# Old Docker config (if exists)
+docker-compose.yml

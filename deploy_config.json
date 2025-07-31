@@ -1,8 +1,11 @@
 {
     "name": "wan22-i2v-worker",
     "description": "WAN 2.2 Image-to-Video Generation Worker optimized for RTX 5090",
-    "dockerImage": "your-dockerhub-username/wan22-worker:v1.0.1",
-    "gpuTypeId": "NVIDIA_GEFORCE_RTX_5090",
+    "builder": "base",
+    "baseImage": "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04",
+    "repository": "https://github.com/gen4sp/wan22runpodServerLess",
+    "branch": "main",
+    "gpuTypeId": "NVIDIA_RTX_4090",
     "containerDiskInGb": 50,
     "volumeMounts": [
         {
