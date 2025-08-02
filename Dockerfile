@@ -39,11 +39,14 @@ RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_n
     && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /comfyui/custom_nodes/ComfyUI-VideoHelperSuite \
     && git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git /comfyui/custom_nodes/ComfyUI_IPAdapter_plus \
     && git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
-
+    && git clone https://github.com/vrgamegirl19/comfyui-vrgamedevgirl.git /comfyui/custom_nodes/comfyui-vrgamedevgirl
+    && git clone https://github.com/ShmuelRonen/ComfyUI-Hunyuan-Latent.git /comfyui/custom_nodes/ComfyUI-Hunyuan-Latent
 # Устанавливаем зависимости для custom nodes
 RUN cd /comfyui/custom_nodes/ComfyUI_essentials && pip install -r requirements.txt || true
 RUN cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && pip install -r requirements.txt || true
 RUN cd /comfyui/custom_nodes/ComfyUI_IPAdapter_plus && pip install -r requirements.txt || true
+RUN cd /comfyui/custom_nodes/comfyui-vrgamedevgirl && pip install -r requirements.txt || true
+RUN cd /comfyui/custom_nodes/ComfyUI-Hunyuan-Latent && pip install -r requirements.txt || true
 
 # Проверяем установленные custom nodes
 RUN ls -la /comfyui/custom_nodes/ \
@@ -51,6 +54,8 @@ RUN ls -la /comfyui/custom_nodes/ \
     && ls -la /comfyui/custom_nodes/ComfyUI-VideoHelperSuite/ || echo "VideoHelperSuite не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI-WAN/ || echo "ComfyUI-WAN не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI_essentials/ || echo "ComfyUI_essentials не найден!"
+    && ls -la /comfyui/custom_nodes/comfyui-vrgamedevgirl/ || echo "ComfyUI_essentials не найден!"
+    && ls -la /comfyui/custom_nodes/ComfyUI-Hunyuan-Latent/ || echo "ComfyUI_essentials не найден!"
 
 # Копируем handler и зависимости
 COPY rp_handler.py /
