@@ -119,6 +119,10 @@ python -c "import torchvision" 2>/dev/null || {
     pip install --no-cache-dir torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu128
 }
 
+# Фикс для torchaudio циклического импорта
+echo "🔧 Применение фикса для torchaudio циклического импорта..."
+python3 /tmp/torchaudio_patch.py 2>/dev/null || echo "⚠️  Не удалось применить torchaudio патч"
+
 # Проверяем CUDA и xformers
 echo "🧪 Проверка CUDA и xformers..."
 python -c "
@@ -133,11 +137,43 @@ if torch.cuda.is_available():
     print(f'✅ VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f}GB')
 "
 
-# Запускаем ComfyUI в фоне
-echo "🎨 Запуск ComfyUI..."
+# Создаем startup скрипт для ComfyUI с патчем
+cat > /tmp/comfyui_with_patch.py << 'EOF'
+#!/usr/bin/env python3
+import sys
+import os
+
+# Применяем torchaudio patch
+try:
+    exec(open('/tmp/torchaudio_patch.py').read())
+except Exception as e:
+    print(f'⚠️  Ошибка применения torchaudio патча: {e}')
+
+# Меняем рабочую директорию на ComfyUI
+os.chdir('/comfyui')
+
+# Добавляем аргументы командной строки
+sys.argv = ['main.py', '--listen', '0.0.0.0', '--port', '8188']
+
+# Запускаем основной модуль ComfyUI
+exec(open('main.py').read())
+EOF
+
+# Запускаем ComfyUI в фоне с патчем для torchaudio
+echo "🎨 Запуск ComfyUI с патчем для torchaudio..."
 cd /comfyui
-python main.py --listen 0.0.0.0 --port 8188 &
+
+# Пробуем сначала с патчем
+python /tmp/comfyui_with_patch.py &
 COMFY_PID=$!
+
+# Проверяем что процесс запустился
+sleep 2
+if ! kill -0 $COMFY_PID 2>/dev/null; then
+    echo "⚠️  ComfyUI с патчем не запустился, пробуем без патча..."
+    python main.py --listen 0.0.0.0 --port 8188 &
+    COMFY_PID=$!
+fi
 
 # Ждем запуска ComfyUI
 echo "⏳ Ожидание готовности ComfyUI..."
