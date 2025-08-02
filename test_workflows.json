@@ -1,0 +1,46 @@
+{
+    "list_workflows": {
+        "input": {
+            "action": "list_workflows"
+        }
+    },
+    "wan22_t2v": {
+        "input": {
+            "prompt": "A stunning mountain landscape with flowing rivers and dramatic clouds",
+            "workflow": "wan22",
+            "options": {
+                "width": 832,
+                "height": 832,
+                "length": 81,
+                "steps": 6,
+                "cfg": 1.0,
+                "frame_rate": 24
+            }
+        }
+    },
+    "simple_test": {
+        "input": {
+            "prompt": "A beautiful sunset over the ocean",
+            "workflow": "test",
+            "options": {
+                "width": 512,
+                "height": 512,
+                "steps": 4,
+                "cfg": 7.0
+            }
+        }
+    },
+    "wan22_with_image": {
+        "input": {
+            "prompt": "Transform this image into a flowing animation",
+            "workflow": "wan2.2",
+            "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+            "options": {
+                "width": 832,
+                "height": 832,
+                "length": 49,
+                "steps": 8
+            }
+        }
+    }
+}

@@ -9,6 +9,7 @@ import time
 from PIL import Image
 import os
 import logging
+from workflows import get_workflow, list_available_workflows
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -84,201 +85,39 @@ def create_empty_image(width=832, height=832, filename="empty_image.png"):
         logger.error(f"Ошибка создания пустого изображения: {e}")
         raise
 
-def create_wan22_workflow(prompt, image_filename, options=None):
-    """Создает воркфлоу WAN 2.2 на основе fast-wan22.js"""
-    if options is None:
-        options = {}
+def get_output_files_from_workflow(result, workflow_instance):
+    """Получает выходные файлы в зависимости от типа воркфлоу"""
+    output_files = []
     
-    # Параметры по умолчанию
-    width = options.get('width', 832)
-    height = options.get('height', 832) 
-    length = options.get('length', 81)
-    cfg = options.get('cfg', 1.0)
-    steps = options.get('steps', 6)
-    seed = options.get('seed', int(time.time()))
-    
-    workflow = {
-        "6": {
-            "inputs": {
-                "text": prompt,
-                "clip": ["38", 0]
-            },
-            "class_type": "CLIPTextEncode",
-            "_meta": {"title": "CLIP Text Encode (Positive Prompt)"}
-        },
-        "7": {
-            "inputs": {
-                "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
-                "clip": ["38", 0]
-            },
-            "class_type": "CLIPTextEncode",
-            "_meta": {"title": "CLIP Text Encode (Negative Prompt)"}
-        },
-        "8": {
-            "inputs": {
-                "samples": ["58", 0],
-                "vae": ["39", 0]
-            },
-            "class_type": "VAEDecode",
-            "_meta": {"title": "VAE Decode"}
-        },
-        "37": {
-            "inputs": {
-                "unet_name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
-                "weight_dtype": "default"
-            },
-            "class_type": "UNETLoader",
-            "_meta": {"title": "Load Diffusion Model (High)"}
-        },
-        "38": {
-            "inputs": {
-                "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
-                "type": "wan"
-            },
-            "class_type": "CLIPLoader",
-            "_meta": {"title": "Load CLIP"}
-        },
-        "39": {
-            "inputs": {
-                "vae_name": "wan_2.1_vae.safetensors"
-            },
-            "class_type": "VAELoader",
-            "_meta": {"title": "Load VAE"}
-        },
-        "50": {
-            "inputs": {
-                "width": width,
-                "height": height,
-                "length": length,
-                "batch_size": 1,
-                "positive": ["6", 0],
-                "negative": ["7", 0],
-                "vae": ["39", 0],
-                "start_image": ["68", 0]
-            },
-            "class_type": "WanImageToVideo",
-            "_meta": {"title": "WanImageToVideo"}
-        },
-        "52": {
-            "inputs": {
-                "image": image_filename
-            },
-            "class_type": "LoadImage",
-            "_meta": {"title": "Load Image"}
-        },
-        "54": {
-            "inputs": {
-                "shift": 8.0,
-                "model": ["37", 0]
-            },
-            "class_type": "ModelSamplingSD3",
-            "_meta": {"title": "ModelSamplingSD3 (High)"}
-        },
-        "55": {
-            "inputs": {
-                "shift": 8.0,
-                "model": ["56", 0]
-            },
-            "class_type": "ModelSamplingSD3",
-            "_meta": {"title": "ModelSamplingSD3 (Low)"}
-        },
-        "56": {
-            "inputs": {
-                "unet_name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
-                "weight_dtype": "default"
-            },
-            "class_type": "UNETLoader",
-            "_meta": {"title": "Load Diffusion Model (Low)"}
-        },
-        "57": {
-            "inputs": {
-                "add_noise": "enable",
-                "noise_seed": seed,
-                "steps": steps,
-                "cfg": cfg,
-                "sampler_name": "euler",
-                "scheduler": "simple",
-                "start_at_step": 0,
-                "end_at_step": 3,
-                "return_with_leftover_noise": "enable",
-                "model": ["62", 0],
-                "positive": ["50", 0],
-                "negative": ["50", 1],
-                "latent_image": ["50", 2]
-            },
-            "class_type": "KSamplerAdvanced",
-            "_meta": {"title": "KSampler (Advanced) High"}
-        },
-        "58": {
-            "inputs": {
-                "add_noise": "disable",
-                "noise_seed": seed,
-                "steps": steps,
-                "cfg": cfg,
-                "sampler_name": "euler",
-                "scheduler": "simple",
-                "start_at_step": 3,
-                "end_at_step": 10000,
-                "return_with_leftover_noise": "disable",
-                "model": ["63", 0],
-                "positive": ["50", 0],
-                "negative": ["50", 1],
-                "latent_image": ["57", 0]
-            },
-            "class_type": "KSamplerAdvanced",
-            "_meta": {"title": "KSampler (Advanced) Low"}
-        },
-        "62": {
-            "inputs": {
-                "lora_name": "wan/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors",
-                "strength_model": 1.0,
-                "model": ["54", 0]
-            },
-            "class_type": "LoraLoaderModelOnly",
-            "_meta": {"title": "LoraLoaderModelOnly (High)"}
-        },
-        "63": {
-            "inputs": {
-                "lora_name": "wan/Wan21_T2V_14B_lightx2v_cfg_step_distill_lora_rank32.safetensors",
-                "strength_model": 1.0,
-                "model": ["55", 0]
-            },
-            "class_type": "LoraLoaderModelOnly",
-            "_meta": {"title": "LoraLoaderModelOnly (Low)"}
-        },
-        "64": {
-            "inputs": {
-                "frame_rate": options.get('frame_rate', 24),
-                "loop_count": 0,
-                "filename_prefix": "wan2_2",
-                "format": "video/h264-mp4",
-                "pix_fmt": "yuv420p",
-                "crf": 19,
-                "save_metadata": True,
-                "trim_to_audio": False,
-                "pingpong": False,
-                "save_output": True,
-                "images": ["8", 0]
-            },
-            "class_type": "VHS_VideoCombine",
-            "_meta": {"title": "Video Combine 🎥🅥🅗🅢"}
-        },
-        "68": {
-            "inputs": {
-                "width": width,
-                "height": height,
-                "interpolation": "lanczos",
-                "method": "fill / crop",
-                "condition": "always",
-                "multiple_of": 0,
-                "image": ["52", 0]
-            },
-            "class_type": "ImageResize+",
-            "_meta": {"title": "🔧 Image Resize"}
-        }
-    }
-    
-    return workflow
+    try:
+        # Для видео воркфлоу (WAN 2.2) ищем видеофайлы
+        if hasattr(workflow_instance, 'supports_t2v') and workflow_instance.supports_t2v():
+            # Ищем видеофайлы в outputs
+            for node_id, node_result in result.get("outputs", {}).items():
+                if "gifs" in node_result:
+                    for gif_info in node_result["gifs"]:
+                        filename = gif_info["filename"]
+                        output_files.append({
+                            "type": "video",
+                            "filename": filename,
+                            "path": f"/comfyui/output/{filename}"
+                        })
+        else:
+            # Для обычных воркфлоу ищем изображения
+            for node_id, node_result in result.get("outputs", {}).items():
+                if "images" in node_result:
+                    for img_info in node_result["images"]:
+                        filename = img_info["filename"]
+                        output_files.append({
+                            "type": "image",
+                            "filename": filename,
+                            "path": f"/comfyui/output/{filename}"
+                        })
+                        
+    except Exception as e:
+        logger.error(f"Ошибка получения выходных файлов: {e}")
+        
+    return output_files
 
 def queue_workflow(workflow):
     """Отправляет воркфлоу в очередь ComfyUI"""
@@ -317,26 +156,7 @@ def wait_for_completion(prompt_id, timeout=600):
     
     raise TimeoutError(f"Генерация не завершилась за {timeout} секунд")
 
-def get_output_files(result):
-    """Получает выходные файлы из результата"""
-    output_files = []
-    
-    try:
-        # Ищем видеофайлы в outputs
-        for node_id, node_result in result.get("outputs", {}).items():
-            if "gifs" in node_result:
-                for gif_info in node_result["gifs"]:
-                    filename = gif_info["filename"]
-                    output_files.append({
-                        "type": "video",
-                        "filename": filename,
-                        "path": f"/comfyui/output/{filename}"
-                    })
-                    
-    except Exception as e:
-        logger.error(f"Ошибка получения выходных файлов: {e}")
-        
-    return output_files
+
 
 def encode_file_to_base64(file_path):
     """Кодирует файл в base64 для возврата"""
@@ -348,7 +168,7 @@ def encode_file_to_base64(file_path):
         return None
 
 def handler(event):
-    """Основной обработчик RunPod"""
+    """Основной обработчик RunPod с поддержкой разных воркфлоу"""
     try:
         # Проверяем доступность ComfyUI
         if not wait_for_comfy():
@@ -356,22 +176,46 @@ def handler(event):
         
         # Получаем входные данные
         input_data = event["input"]
+        
+        # Специальная команда для получения списка воркфлоу
+        if input_data.get("action") == "list_workflows":
+            return {"workflows": list_available_workflows()}
+        
         prompt = input_data.get("prompt", "A beautiful scene")
         image_data = input_data.get("image")
         options = input_data.get("options", {})
+        workflow_name = input_data.get("workflow", "default")
         
-        logger.info(f"Начинаем генерацию с промптом: {prompt}")
+        logger.info(f"Начинаем генерацию с воркфлоу '{workflow_name}' и промптом: {prompt}")
+        
+        # Получаем воркфлоу
+        workflow_instance = get_workflow(workflow_name)
+        if not workflow_instance:
+            return {"error": f"Воркфлоу '{workflow_name}' не найден. Доступные воркфлоу: {list(list_available_workflows().keys())}"}
+        
+        logger.info(f"Используем воркфлоу: {workflow_instance.get_info()}")
         
         # Загружаем изображение или создаем пустое для T2V режима
         if image_data:
+            if not workflow_instance.supports_i2v():
+                return {"error": f"Воркфлоу '{workflow_name}' не поддерживает режим Image-to-Video"}
             logger.info("Режим I2V: используем предоставленное изображение")
             image_filename = upload_image_to_comfy(image_data)
         else:
-            logger.info("Режим T2V: создаем черное изображение для начального кадра")
-            image_filename = create_empty_image(options.get('width', 832), options.get('height', 832))
+            if not workflow_instance.supports_t2v():
+                # Создаем пустое изображение даже для I2V воркфлоу если изображение не предоставлено
+                logger.info("Изображение не предоставлено, создаем пустое")
+            else:
+                logger.info("Режим T2V: создаем черное изображение для начального кадра")
+            
+            default_options = workflow_instance.get_default_options()
+            image_filename = create_empty_image(
+                options.get('width', default_options.get('width', 832)), 
+                options.get('height', default_options.get('height', 832))
+            )
         
         # Создаем воркфлоу
-        workflow = create_wan22_workflow(prompt, image_filename, options)
+        workflow = workflow_instance.create_workflow(prompt, image_filename, options)
         
         # Отправляем в очередь
         prompt_id = queue_workflow(workflow)
@@ -382,24 +226,29 @@ def handler(event):
         logger.info("Генерация завершена")
         
         # Получаем выходные файлы
-        output_files = get_output_files(result)
+        output_files = get_output_files_from_workflow(result, workflow_instance)
         
         if not output_files:
             return {"error": "Выходные файлы не найдены"}
         
-        # Кодируем основной видеофайл
-        main_video = output_files[0]
-        video_base64 = encode_file_to_base64(main_video["path"])
+        # Кодируем основной файл
+        main_file = output_files[0]
+        file_base64 = encode_file_to_base64(main_file["path"])
         
-        if not video_base64:
-            return {"error": "Не удалось закодировать видеофайл"}
+        if not file_base64:
+            return {"error": f"Не удалось закодировать {main_file['type']}"}
         
-        return {
-            "video": video_base64,
-            "filename": main_video["filename"],
+        # Формируем ответ в зависимости от типа файла
+        response = {
+            main_file["type"]: file_base64,
+            "filename": main_file["filename"],
             "prompt_id": prompt_id,
-            "files_count": len(output_files)
+            "files_count": len(output_files),
+            "workflow_used": workflow_name,
+            "workflow_info": workflow_instance.get_info()
         }
+        
+        return response
         
     except Exception as e:
         logger.error(f"Ошибка в обработчике: {e}")

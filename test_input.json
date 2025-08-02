@@ -1,6 +1,7 @@
 {
     "input": {
         "prompt": "A beautiful cat walking in a garden, cinematic lighting, high quality",
+        "workflow": "wan22",
         "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQIHWNgAAIAAAUAAY27m/MAAAAASUVORK5CYII=",
         "options": {
             "width": 832,
