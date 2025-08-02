@@ -36,8 +36,8 @@ RUN pip install -r requirements.txt
 # Устанавливаем ComfyUI Manager для управления custom nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
 
-# Предустанавливаем GitPython для ComfyUI-Manager
-RUN pip install --no-cache-dir gitpython==3.1.43
+# Предустанавливаем последнюю версию GitPython для ComfyUI-Manager
+RUN pip install --upgrade gitpython
 
 # Устанавливаем необходимые custom nodes
 RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
