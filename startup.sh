@@ -140,9 +140,30 @@ if torch.cuda.is_available():
 # Проверяем и переустанавливаем GitPython для ComfyUI-Manager
 echo "🔧 Проверка GitPython для ComfyUI-Manager..."
 python -c "import git; print(f'✅ GitPython: {git.__version__}')" 2>/dev/null || {
-    echo "⚠️  Проблема с GitPython, переустанавливаем..."
-    pip install --upgrade --force-reinstall gitpython
+    echo "⚠️  Проблема с GitPython, агрессивно переустанавливаем..."
+    pip uninstall -y gitpython || true
+    pip install --no-cache-dir --force-reinstall gitpython
+    # Также переустанавливаем все зависимости ComfyUI-Manager
+    if [ -f "/comfyui/custom_nodes/ComfyUI-Manager/requirements.txt" ]; then
+        echo "🔧 Переустановка зависимостей ComfyUI-Manager..."
+        pip install --no-cache-dir -r /comfyui/custom_nodes/ComfyUI-Manager/requirements.txt || true
+    fi
 }
+
+# Финальная проверка GitPython
+echo "🔍 Финальная проверка GitPython..."
+python -c "
+try:
+    import git
+    print(f'✅ GitPython успешно загружен: {git.__version__}')
+    # Проверяем что можем создать Repo объект
+    repo = git.Repo('/comfyui')
+    print('✅ GitPython функционирует нормально')
+except Exception as e:
+    print(f'❌ GitPython проблема: {e}')
+    import sys
+    sys.exit(1)
+"
 
 # Проверяем ComfyUI-Manager
 echo "🔌 Проверка ComfyUI-Manager..."
@@ -163,6 +184,7 @@ cat > /tmp/comfyui_with_patch.py << 'EOF'
 #!/usr/bin/env python3
 import sys
 import os
+import subprocess
 
 # Применяем torchaudio patch
 try:
@@ -170,14 +192,19 @@ try:
 except Exception as e:
     print(f'⚠️  Ошибка применения torchaudio патча: {e}')
 
-# Меняем рабочую директорию на ComfyUI
+# Меняем рабочую директорию на ComfyUI  
 os.chdir('/comfyui')
 
-# Добавляем аргументы командной строки
-sys.argv = ['main.py', '--listen', '0.0.0.0', '--port', '8188']
-
-# Запускаем основной модуль ComfyUI
-exec(open('main.py').read())
+# Запускаем ComfyUI через subprocess с правильными путями
+try:
+    # Запускаем в фоне, не блокируя выполнение
+    process = subprocess.Popen([sys.executable, 'main.py', '--listen', '0.0.0.0', '--port', '8188'])
+    print(f'✅ ComfyUI запущен с PID: {process.pid}')
+    # Позволяем процессу работать, не дожидаясь завершения
+    process.wait()
+except Exception as e:
+    print(f'❌ Ошибка запуска ComfyUI: {e}')
+    exit(1)
 EOF
 
 # Запускаем ComfyUI в фоне с патчем для torchaudio
