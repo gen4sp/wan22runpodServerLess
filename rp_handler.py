@@ -64,6 +64,26 @@ def upload_image_to_comfy(image_data, filename="input_image.png"):
         logger.error(f"Ошибка загрузки изображения: {e}")
         raise
 
+def create_empty_image(width=832, height=832, filename="empty_image.png"):
+    """Создает черное изображение для T2V режима"""
+    try:
+        # Создаем черное изображение через PIL
+        image = Image.new('RGB', (width, height), color='black')
+        
+        # Сохраняем в input директорию ComfyUI
+        input_dir = "/comfyui/input"
+        os.makedirs(input_dir, exist_ok=True)
+        
+        image_path = os.path.join(input_dir, filename)
+        image.save(image_path)
+        
+        logger.info(f"Создано пустое изображение {width}x{height} как {filename}")
+        return filename
+        
+    except Exception as e:
+        logger.error(f"Ошибка создания пустого изображения: {e}")
+        raise
+
 def create_wan22_workflow(prompt, image_filename, options=None):
     """Создает воркфлоу WAN 2.2 на основе fast-wan22.js"""
     if options is None:
@@ -340,13 +360,15 @@ def handler(event):
         image_data = input_data.get("image")
         options = input_data.get("options", {})
         
-        if not image_data:
-            return {"error": "Требуется входное изображение"}
-        
         logger.info(f"Начинаем генерацию с промптом: {prompt}")
         
-        # Загружаем изображение
-        image_filename = upload_image_to_comfy(image_data)
+        # Загружаем изображение или создаем пустое для T2V режима
+        if image_data:
+            logger.info("Режим I2V: используем предоставленное изображение")
+            image_filename = upload_image_to_comfy(image_data)
+        else:
+            logger.info("Режим T2V: создаем черное изображение для начального кадра")
+            image_filename = create_empty_image(options.get('width', 832), options.get('height', 832))
         
         # Создаем воркфлоу
         workflow = create_wan22_workflow(prompt, image_filename, options)

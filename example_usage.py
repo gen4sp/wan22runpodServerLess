@@ -85,6 +85,53 @@ def generate_video(image_path, prompt, options=None):
         
     return result["output"]
 
+def generate_text_to_video(prompt, options=None):
+    """Генерирует видео только из текстового промпта (T2V режим)"""
+    
+    # Подготавливаем запрос без изображения
+    payload = {
+        "input": {
+            "prompt": prompt,
+            "options": options or {}
+        }
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {RUNPOD_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    print(f"🚀 Отправляем T2V запрос...")
+    print(f"📝 Промпт: {prompt}")
+    if options:
+        print(f"⚙️  Параметры: {options}")
+    
+    try:
+        # Отправляем запрос
+        response = requests.post(
+            f"{RUNPOD_URL}/runsync", 
+            json=payload, 
+            headers=headers,
+            timeout=600  # 10 минут
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        if "error" in result:
+            print(f"❌ Ошибка обработки: {result['error']}")
+            return None
+        
+        if "output" not in result:
+            print(f"❌ Нет выходных данных: {result}")
+            return None
+            
+        return result["output"]
+        
+    except Exception as e:
+        print(f"❌ Ошибка запроса: {e}")
+        return None
+
 def main():
     """Основная функция с примерами использования"""
     
@@ -147,6 +194,27 @@ def main():
     
     if result:
         save_video(result["video"], "output_ocean_long.mp4")
+    
+    # Пример 4: Text-to-Video (без изображения)
+    print("\n🎬 Пример 4: T2V - генерация только по промпту")
+    
+    result = generate_text_to_video(
+        prompt="A majestic dragon flying through stormy clouds, lightning, epic fantasy, cinematic",
+        options={
+            "width": 832,
+            "height": 832,
+            "length": 81,
+            "steps": 6,
+            "cfg": 1.0,
+            "frame_rate": 24,
+            "seed": 123
+        }
+    )
+    
+    if result:
+        save_video(result["video"], "output_dragon_t2v.mp4")
+        print(f"📁 Файл: {result['filename']}")
+        print(f"🆔 Prompt ID: {result['prompt_id']}")
 
 def async_example():
     """Пример асинхронного использования с run"""
