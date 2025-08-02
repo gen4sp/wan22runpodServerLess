@@ -1,7 +1,10 @@
 FROM runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04
 
 ENV CM_NETWORK_MODE=offline \
-    COMFYUI_DISABLE_VERSION_CHECK=1
+    COMFYUI_DISABLE_VERSION_CHECK=1 \
+    TORCH_AUDIO_BACKEND=soundfile \
+    TORCHAUDIO_BACKEND=soundfile \
+    DISABLE_TORCHAUDIO_CUDA_CHECK=1
 # Обновляем систему и устанавливаем необходимые зависимости
 RUN apt-get update && apt-get install -y \
     ffmpeg \
@@ -33,11 +36,20 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
 WORKDIR /comfyui
 RUN pip install -r requirements.txt
 
+# Предустанавливаем GitPython ПЕРЕД установкой ComfyUI-Manager
+RUN pip install --upgrade gitpython
+
 # Устанавливаем ComfyUI Manager для управления custom nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
 
-# Предустанавливаем последнюю версию GitPython для ComfyUI-Manager
-RUN pip install --upgrade gitpython
+# Устанавливаем зависимости ComfyUI-Manager
+RUN cd /comfyui/custom_nodes/ComfyUI-Manager && pip install -r requirements.txt || true
+
+# Копируем handler и зависимости
+COPY rp_handler.py /
+COPY requirements.txt /
+COPY workflows/ /workflows/
+RUN pip install -r /requirements.txt
 
 # Устанавливаем необходимые custom nodes
 RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
@@ -62,11 +74,7 @@ RUN ls -la /comfyui/custom_nodes/ \
     && ls -la /comfyui/custom_nodes/ComfyUI-post-processing-nodes/ || echo "ComfyUI_essentials не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI-EmptyHunyuanLatent/ || echo "ComfyUI_essentials не найден!"
 
-# Копируем handler и зависимости
-COPY rp_handler.py /
-COPY requirements.txt /
-COPY workflows/ /workflows/
-RUN pip install -r /requirements.txt
+
 
 # Переменные окружения для оптимизации
 ENV TORCH_COMPILE=1
@@ -75,9 +83,10 @@ ENV TORCH_CUDA_ARCH_LIST="9.0"
 # Устанавливаем рабочую директорию
 WORKDIR /
 
-# Копируем startup скрипт и диагностику
+# Копируем startup скрипт, диагностику и патчи
 COPY startup.sh /startup.sh
 COPY diagnose_volume.sh /diagnose_volume.sh
+COPY torchaudio_patch.py /tmp/torchaudio_patch.py
 RUN chmod +x /startup.sh /diagnose_volume.sh
 
 # Команда запуска через startup скрипт
