@@ -41,7 +41,7 @@ RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_n
     && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /comfyui/custom_nodes/ComfyUI-VideoHelperSuite \
     && git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git /comfyui/custom_nodes/ComfyUI_IPAdapter_plus \
     && git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative \
-    && git clone clone https://github.com/EllangoK/ComfyUI-post-processing-nodes.git /comfyui/custom_nodes/ComfyUI-post-processing-nodes \
+    && git clone https://github.com/EllangoK/ComfyUI-post-processing-nodes.git /comfyui/custom_nodes/ComfyUI-post-processing-nodes \
     && git clone https://github.com/ShmuelRonen/ComfyUI-EmptyHunyuanLatent.git /comfyui/custom_nodes/ComfyUI-EmptyHunyuanLatent
 # Устанавливаем зависимости для custom nodes
 RUN cd /comfyui/custom_nodes/ComfyUI_essentials && pip install -r requirements.txt || true
