@@ -55,6 +55,7 @@ RUN ls -la /comfyui/custom_nodes/ \
 # Копируем handler и зависимости
 COPY rp_handler.py /
 COPY requirements.txt /
+COPY workflows/ /workflows/
 RUN pip install -r /requirements.txt
 
 # Переменные окружения для оптимизации
