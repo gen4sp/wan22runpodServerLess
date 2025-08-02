@@ -53,8 +53,8 @@ RUN ls -la /comfyui/custom_nodes/ \
     && echo "Проверяем установленные custom nodes:" \
     && ls -la /comfyui/custom_nodes/ComfyUI-VideoHelperSuite/ || echo "VideoHelperSuite не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI-WAN/ || echo "ComfyUI-WAN не найден!" \
-    && ls -la /comfyui/custom_nodes/ComfyUI_essentials/ || echo "ComfyUI_essentials не найден!"
-    && ls -la /comfyui/custom_nodes/comfyui-vrgamedevgirl/ || echo "ComfyUI_essentials не найден!"
+    && ls -la /comfyui/custom_nodes/ComfyUI_essentials/ || echo "ComfyUI_essentials не найден!" \
+    && ls -la /comfyui/custom_nodes/comfyui-vrgamedevgirl/ || echo "ComfyUI_essentials не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI-Hunyuan-Latent/ || echo "ComfyUI_essentials не найден!"
 
 # Копируем handler и зависимости
