@@ -38,8 +38,8 @@ RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_no
 RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
     && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /comfyui/custom_nodes/ComfyUI-VideoHelperSuite \
     && git clone https://github.com/cubiq/ComfyUI_IPAdapter_plus.git /comfyui/custom_nodes/ComfyUI_IPAdapter_plus \
-    && git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative
-    && git clone https://github.com/vrgamegirl19/comfyui-vrgamedevgirl.git /comfyui/custom_nodes/comfyui-vrgamedevgirl
+    && git clone https://github.com/Flow-two/ComfyUI-WanStartEndFramesNative.git /comfyui/custom_nodes/ComfyUI-WanStartEndFramesNative \
+    && git clone https://github.com/vrgamegirl19/comfyui-vrgamedevgirl.git /comfyui/custom_nodes/comfyui-vrgamedevgirl \
     && git clone https://github.com/ShmuelRonen/ComfyUI-Hunyuan-Latent.git /comfyui/custom_nodes/ComfyUI-Hunyuan-Latent
 # Устанавливаем зависимости для custom nodes
 RUN cd /comfyui/custom_nodes/ComfyUI_essentials && pip install -r requirements.txt || true
