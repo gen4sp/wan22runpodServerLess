@@ -42,6 +42,12 @@ RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_no
 # Предустанавливаем последнюю версию GitPython для ComfyUI-Manager
 RUN pip install --upgrade gitpython
 
+# Копируем handler и зависимости
+COPY rp_handler.py /
+COPY requirements.txt /
+COPY workflows/ /workflows/
+RUN pip install -r /requirements.txt
+
 # Устанавливаем необходимые custom nodes
 RUN  git clone https://github.com/cubiq/ComfyUI_essentials.git /comfyui/custom_nodes/ComfyUI_essentials \
     && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git /comfyui/custom_nodes/ComfyUI-VideoHelperSuite \
@@ -65,11 +71,7 @@ RUN ls -la /comfyui/custom_nodes/ \
     && ls -la /comfyui/custom_nodes/ComfyUI-post-processing-nodes/ || echo "ComfyUI_essentials не найден!" \
     && ls -la /comfyui/custom_nodes/ComfyUI-EmptyHunyuanLatent/ || echo "ComfyUI_essentials не найден!"
 
-# Копируем handler и зависимости
-COPY rp_handler.py /
-COPY requirements.txt /
-COPY workflows/ /workflows/
-RUN pip install -r /requirements.txt
+
 
 # Переменные окружения для оптимизации
 ENV TORCH_COMPILE=1
