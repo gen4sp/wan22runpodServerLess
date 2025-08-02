@@ -9,7 +9,7 @@ import time
 from PIL import Image
 import os
 import logging
-from workflows import get_workflow, list_available_workflows
+from workflows import process_workflow, analyze_workflow, get_workflow_info, WorkflowType
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -85,15 +85,15 @@ def create_empty_image(width=832, height=832, filename="empty_image.png"):
         logger.error(f"Ошибка создания пустого изображения: {e}")
         raise
 
-def get_output_files_from_workflow(result, workflow_instance):
-    """Получает выходные файлы в зависимости от типа воркфлоу"""
+def get_output_files_by_type(result, workflow_type):
+    """Получает выходные файлы в зависимости от типа воркфлоု"""
     output_files = []
     
     try:
-        # Для видео воркфлоу (WAN 2.2) ищем видеофайлы
-        if hasattr(workflow_instance, 'supports_t2v') and workflow_instance.supports_t2v():
-            # Ищем видеофайлы в outputs
+        # Для видео воркфлоу ищем видеофайлы
+        if workflow_type in [WorkflowType.T2V, WorkflowType.VIDEO_UPSCALE]:
             for node_id, node_result in result.get("outputs", {}).items():
+                # Ищем видеофайлы
                 if "gifs" in node_result:
                     for gif_info in node_result["gifs"]:
                         filename = gif_info["filename"]
@@ -102,10 +102,50 @@ def get_output_files_from_workflow(result, workflow_instance):
                             "filename": filename,
                             "path": f"/comfyui/output/{filename}"
                         })
-        else:
-            # Для обычных воркфлоу ищем изображения
+                # Альтернативный формат для видео
+                elif "videos" in node_result:
+                    for video_info in node_result["videos"]:
+                        filename = video_info["filename"]
+                        output_files.append({
+                            "type": "video",
+                            "filename": filename,
+                            "path": f"/comfyui/output/{filename}"
+                        })
+        
+        # Для изображений воркфлоу ищем изображения
+        elif workflow_type in [WorkflowType.T2I, WorkflowType.IMG2IMG]:
             for node_id, node_result in result.get("outputs", {}).items():
                 if "images" in node_result:
+                    for img_info in node_result["images"]:
+                        filename = img_info["filename"]
+                        output_files.append({
+                            "type": "image",
+                            "filename": filename,
+                            "path": f"/comfyui/output/{filename}"
+                        })
+        
+        # Для неизвестных типов пробуем найти любые выходные файлы
+        else:
+            for node_id, node_result in result.get("outputs", {}).items():
+                # Сначала видео
+                if "gifs" in node_result:
+                    for gif_info in node_result["gifs"]:
+                        filename = gif_info["filename"]
+                        output_files.append({
+                            "type": "video",
+                            "filename": filename,
+                            "path": f"/comfyui/output/{filename}"
+                        })
+                elif "videos" in node_result:
+                    for video_info in node_result["videos"]:
+                        filename = video_info["filename"]
+                        output_files.append({
+                            "type": "video",
+                            "filename": filename,
+                            "path": f"/comfyui/output/{filename}"
+                        })
+                # Затем изображения
+                elif "images" in node_result:
                     for img_info in node_result["images"]:
                         filename = img_info["filename"]
                         output_files.append({
@@ -168,7 +208,7 @@ def encode_file_to_base64(file_path):
         return None
 
 def handler(event):
-    """Основной обработчик RunPod с поддержкой разных воркфлоу"""
+    """Основной обработчик RunPod с поддержкой произвольных JSON воркфлоу"""
     try:
         # Проверяем доступность ComfyUI
         if not wait_for_comfy():
@@ -177,48 +217,44 @@ def handler(event):
         # Получаем входные данные
         input_data = event["input"]
         
-        # Специальная команда для получения списка воркфлоу
-        if input_data.get("action") == "list_workflows":
-            return {"workflows": list_available_workflows()}
+        # Специальная команда для анализа воркфлоу
+        if input_data.get("action") == "analyze_workflow":
+            workflow = input_data.get("workflow")
+            if not workflow:
+                return {"error": "Для анализа требуется воркфлоу в параметре 'workflow'"}
+            return {"workflow_info": get_workflow_info(workflow)}
         
-        prompt = input_data.get("prompt", "A beautiful scene")
+        # Получаем обязательный параметр workflow (полный JSON)
+        workflow = input_data.get("workflow")
+        if not workflow:
+            return {"error": "Параметр 'workflow' обязателен и должен содержать полный JSON воркфлоу ComfyUI"}
+        
+        # Получаем остальные параметры
+        prompt = input_data.get("prompt")
         image_data = input_data.get("image")
+        video_data = input_data.get("video") 
         options = input_data.get("options", {})
-        workflow_name = input_data.get("workflow", "default")
         
-        logger.info(f"Начинаем генерацию с воркфлоу '{workflow_name}' и промптом: {prompt}")
+        logger.info(f"Начинаем обработку воркфлоу с {len(workflow)} узлами")
+        if prompt:
+            logger.info(f"Промпт: {prompt}")
         
-        # Получаем воркфлоу
-        workflow_instance = get_workflow(workflow_name)
-        if not workflow_instance:
-            return {"error": f"Воркфлоу '{workflow_name}' не найден. Доступные воркфлоу: {list(list_available_workflows().keys())}"}
-        
-        logger.info(f"Используем воркфлоу: {workflow_instance.get_info()}")
-        
-        # Загружаем изображение или создаем пустое для T2V режима
-        if image_data:
-            if not workflow_instance.supports_i2v():
-                return {"error": f"Воркфлоу '{workflow_name}' не поддерживает режим Image-to-Video"}
-            logger.info("Режим I2V: используем предоставленное изображение")
-            image_filename = upload_image_to_comfy(image_data)
-        else:
-            if not workflow_instance.supports_t2v():
-                # Создаем пустое изображение даже для I2V воркфлоу если изображение не предоставлено
-                logger.info("Изображение не предоставлено, создаем пустое")
-            else:
-                logger.info("Режим T2V: создаем черное изображение для начального кадра")
-            
-            default_options = workflow_instance.get_default_options()
-            image_filename = create_empty_image(
-                options.get('width', default_options.get('width', 832)), 
-                options.get('height', default_options.get('height', 832))
+        # Обрабатываем воркфлоу
+        try:
+            prepared_workflow, workflow_type, metadata = process_workflow(
+                workflow=workflow,
+                prompt=prompt,
+                image_data=image_data,
+                video_data=video_data,
+                options=options
             )
+        except ValueError as e:
+            return {"error": f"Ошибка валидации воркфлоу: {str(e)}"}
         
-        # Создаем воркфлоу
-        workflow = workflow_instance.create_workflow(prompt, image_filename, options)
+        logger.info(f"Воркфлоу обработан: тип={workflow_type.value}, узлов={metadata['node_count']}")
         
-        # Отправляем в очередь
-        prompt_id = queue_workflow(workflow)
+        # Отправляем в очередь ComfyUI
+        prompt_id = queue_workflow(prepared_workflow)
         logger.info(f"Воркфлоу поставлен в очередь: {prompt_id}")
         
         # Ждем завершения
@@ -226,7 +262,7 @@ def handler(event):
         logger.info("Генерация завершена")
         
         # Получаем выходные файлы
-        output_files = get_output_files_from_workflow(result, workflow_instance)
+        output_files = get_output_files_by_type(result, workflow_type)
         
         if not output_files:
             return {"error": "Выходные файлы не найдены"}
@@ -238,14 +274,14 @@ def handler(event):
         if not file_base64:
             return {"error": f"Не удалось закодировать {main_file['type']}"}
         
-        # Формируем ответ в зависимости от типа файла
+        # Формируем ответ
         response = {
             main_file["type"]: file_base64,
             "filename": main_file["filename"],
             "prompt_id": prompt_id,
             "files_count": len(output_files),
-            "workflow_used": workflow_name,
-            "workflow_info": workflow_instance.get_info()
+            "workflow_type": workflow_type.value,
+            "metadata": metadata
         }
         
         return response
