@@ -66,25 +66,25 @@ class WorkflowAnalyzer:
         """
         try:
             node_types = cls._extract_node_types(workflow)
-            
+            return WorkflowType.T2I
             # Проверяем на Video Upscale
-            if cls._has_video_upscale_pattern(node_types, workflow):
-                return WorkflowType.VIDEO_UPSCALE
+            # if cls._has_video_upscale_pattern(node_types, workflow):
+            #     return WorkflowType.VIDEO_UPSCALE
             
-            # Проверяем на T2V (Text to Video)
-            if cls._has_t2v_pattern(node_types, workflow):
-                return WorkflowType.T2V
+            # # Проверяем на T2V (Text to Video)
+            # if cls._has_t2v_pattern(node_types, workflow):
+            #     return WorkflowType.T2V
             
-            # Проверяем на T2I (Text to Image)
-            if cls._has_t2i_pattern(node_types, workflow):
-                return WorkflowType.T2I
+            # # Проверяем на T2I (Text to Image)
+            # if cls._has_t2i_pattern(node_types, workflow):
+            #     return WorkflowType.T2I
             
-            # Проверяем на Img2Img
-            if cls._has_img2img_pattern(node_types, workflow):
-                return WorkflowType.IMG2IMG
+            # # Проверяем на Img2Img
+            # if cls._has_img2img_pattern(node_types, workflow):
+            #     return WorkflowType.IMG2IMG
             
-            logger.warning(f"Не удалось определить тип воркфлоу. Найденные узлы: {node_types}")
-            return WorkflowType.UNKNOWN
+            # logger.warning(f"Не удалось определить тип воркфлоу. Найденные узлы: {node_types}")
+            # return WorkflowType.UNKNOWN
             
         except Exception as e:
             logger.error(f"Ошибка анализа воркфлоу: {e}")
