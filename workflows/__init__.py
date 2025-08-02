@@ -1,22 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Система воркфлоу для RunPod хендлера
+Система обработки произвольных JSON воркфлоу для ComfyUI
 """
 
-from .base import WorkflowBase
-from .wan22 import WAN22Workflow
+from .base import (
+    WorkflowType,
+    WorkflowAnalyzer,
+    WorkflowProcessor
+)
 from .loader import (
-    get_workflow,
-    list_available_workflows,
-    register_workflow,
-    workflow_registry
+    WorkflowHandler,
+    process_workflow,
+    analyze_workflow,
+    get_workflow_info,
+    workflow_handler
 )
 
 __all__ = [
-    'WorkflowBase',
-    'WAN22Workflow',
-    'get_workflow',
-    'list_available_workflows',
-    'register_workflow',
-    'workflow_registry'
+    'WorkflowType',
+    'WorkflowAnalyzer',
+    'WorkflowProcessor',
+    'WorkflowHandler',
+    'process_workflow',
+    'analyze_workflow',
+    'get_workflow_info',
+    'workflow_handler'
 ]

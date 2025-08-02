@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Тестовый скрипт для проверки системы воркфлоу
+Тестовый скрипт для новой системы JSON воркфлоу
 """
 
 import json
@@ -11,133 +11,224 @@ import os
 # Добавляем текущую директорию в путь для импорта workflows
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from workflows import get_workflow, list_available_workflows
+from workflows import analyze_workflow, get_workflow_info, process_workflow, WorkflowType
 
 
-def test_workflow_loading():
-    """Тестирует загрузку воркфлоу"""
-    print("=== Тест загрузки воркфлоу ===")
+def test_workflow_analysis():
+    """Тестирует анализ типов воркфлоу"""
+    print("=== Тест анализа воркфлоу ===")
     
-    # Получаем список доступных воркфлоу
-    workflows = list_available_workflows()
-    print(f"Доступно воркфлоу: {len(workflows)}")
+    # Тестовые воркфлоу разных типов
+    test_workflows = {
+        "T2V (WAN 2.2)": {
+            "6": {"class_type": "CLIPTextEncode"},
+            "50": {"class_type": "WanImageToVideo"},
+            "64": {"class_type": "VHS_VideoCombine"}
+        },
+        "T2I (Stable Diffusion)": {
+            "1": {"class_type": "CLIPTextEncode"}, 
+            "3": {"class_type": "KSampler"},
+            "5": {"class_type": "EmptyLatentImage"},
+            "7": {"class_type": "SaveImage"}
+        },
+        "Img2Img": {
+            "1": {"class_type": "CLIPTextEncode"},
+            "3": {"class_type": "KSampler"}, 
+            "5": {"class_type": "LoadImage"},
+            "9": {"class_type": "SaveImage"}
+        },
+        "Video Upscale": {
+            "1": {"class_type": "VHS_LoadVideo"},
+            "2": {"class_type": "ImageUpscaleWithModel"},
+            "3": {"class_type": "VHS_VideoCombine"}
+        }
+    }
     
-    for name, info in workflows.items():
-        print(f"  - {name}: {info.get('name', 'Unknown')} v{info.get('version', '?')}")
-        print(f"    T2V: {info.get('supports_t2v', False)}, I2V: {info.get('supports_i2v', False)}")
+    for name, workflow in test_workflows.items():
+        workflow_type = analyze_workflow(workflow)
+        print(f"  {name}: {workflow_type.value}")
+        
+        # Получаем подробную информацию
+        info = get_workflow_info(workflow)
+        print(f"    Узлов: {info['node_count']}, Выход: {info['expected_output']}")
+        print(f"    Промпт: {info['supports_prompt']}, Изображение: {info['requires_image']}, Видео: {info['requires_video']}")
     
     print()
 
 
-def test_workflow_creation():
-    """Тестирует создание воркфлоу"""
-    print("=== Тест создания воркфлоу ===")
+def test_workflow_processing():
+    """Тестирует обработку воркфлоу"""
+    print("=== Тест обработки воркфлоу ===")
     
-    # Тестируем WAN 2.2
-    wan22 = get_workflow("wan22")
-    if wan22:
-        print("✓ WAN 2.2 загружен успешно")
-        workflow = wan22.create_workflow("Test prompt", "test.png", {"width": 512, "height": 512})
-        print(f"  Создан воркфлоу с {len(workflow)} узлами")
-    else:
-        print("✗ Ошибка загрузки WAN 2.2")
+    # Простой T2I воркфлоу
+    test_workflow = {
+        "1": {
+            "inputs": {"text": "old prompt", "clip": ["4", 1]},
+            "class_type": "CLIPTextEncode"
+        },
+        "3": {
+            "inputs": {"seed": 0, "steps": 10, "cfg": 5.0},
+            "class_type": "KSampler"
+        },
+        "5": {
+            "inputs": {"width": 512, "height": 512},
+            "class_type": "EmptyLatentImage"
+        },
+        "7": {
+            "inputs": {"filename_prefix": "test"},
+            "class_type": "SaveImage"
+        }
+    }
     
-    # Тестируем простой воркфлоу
-    simple = get_workflow("test")
-    if simple:
-        print("✓ Simple Test загружен успешно")
-        workflow = simple.create_workflow("Test prompt", "test.png")
-        print(f"  Создан воркфлоу с {len(workflow)} узлами")
-    else:
-        print("✗ Ошибка загрузки Simple Test")
+    try:
+        prepared_workflow, workflow_type, metadata = process_workflow(
+            workflow=test_workflow,
+            prompt="New test prompt",
+            options={"seed": 12345, "steps": 20}
+        )
+        
+        print(f"✓ Воркфлоу обработан успешно")
+        print(f"  Тип: {workflow_type.value}")
+        print(f"  Метаданные: {metadata}")
+        
+        # Проверяем, что промпт обновился
+        if prepared_workflow["1"]["inputs"]["text"] == "New test prompt":
+            print("  ✓ Промпт обновлен корректно")
+        else:
+            print("  ✗ Ошибка обновления промпта")
+            
+        # Проверяем, что сид обновился
+        if prepared_workflow["3"]["inputs"]["seed"] == 12345:
+            print("  ✓ Сид обновлен корректно")
+        else:
+            print("  ✗ Ошибка обновления сида")
+            
+    except Exception as e:
+        print(f"✗ Ошибка обработки воркфлоу: {e}")
     
     print()
 
 
-def test_workflow_validation():
-    """Тестирует валидацию опций"""
-    print("=== Тест валидации опций ===")
+def test_validation():
+    """Тестирует валидацию входных данных"""
+    print("=== Тест валидации ===")
     
-    wan22 = get_workflow("wan22")
-    if wan22:
-        # Тест с частичными опциями
-        options = {"width": 1024}
-        validated = wan22.validate_options(options)
-        print(f"Опции до валидации: {options}")
-        print(f"Опции после валидации: {validated}")
-        
-        # Проверяем, что значения по умолчанию добавлены
-        default_options = wan22.get_default_options()
-        for key, default_value in default_options.items():
-            if key not in options:
-                assert validated[key] == default_value, f"Значение {key} не установлено по умолчанию"
-        
-        print("✓ Валидация опций работает корректно")
+    # T2V воркфлоу - требует промпт
+    t2v_workflow = {
+        "6": {"class_type": "CLIPTextEncode"},
+        "50": {"class_type": "WanImageToVideo"},
+        "64": {"class_type": "VHS_VideoCombine"}
+    }
+    
+    # Тест без промпта (должен выдать ошибку)
+    try:
+        prepared_workflow, workflow_type, metadata = process_workflow(
+            workflow=t2v_workflow
+        )
+        print("  ✗ Должна была быть ошибка валидации для T2V без промпта")
+    except ValueError as e:
+        print(f"  ✓ Корректная ошибка валидации: {e}")
+    
+    # Img2Img воркфлоу - требует изображение
+    img2img_workflow = {
+        "5": {"class_type": "LoadImage"},
+        "9": {"class_type": "SaveImage"}
+    }
+    
+    try:
+        prepared_workflow, workflow_type, metadata = process_workflow(
+            workflow=img2img_workflow,
+            prompt="Test prompt"
+        )
+        print("  ✗ Должна была быть ошибка валидации для Img2Img без изображения")
+    except ValueError as e:
+        print(f"  ✓ Корректная ошибка валидации: {e}")
     
     print()
 
 
 def load_test_cases():
-    """Загружает тестовые случаи из JSON файла"""
-    try:
-        with open("test_workflows.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("Файл test_workflows.json не найден")
-        return {}
+    """Загружает тестовые случаи из JSON файлов"""
+    test_files = ["test_json_workflows.json", "test_workflows.json"]
+    all_tests = {}
+    
+    for filename in test_files:
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                tests = json.load(f)
+                all_tests.update(tests)
+                print(f"  Загружено {len(tests)} тестов из {filename}")
+        except FileNotFoundError:
+            print(f"  Файл {filename} не найден")
+        except Exception as e:
+            print(f"  Ошибка загрузки {filename}: {e}")
+    
+    return all_tests
 
 
-def test_workflow_compatibility():
-    """Тестирует совместимость воркфлоу с тестовыми случаями"""
-    print("=== Тест совместимости воркфлоу ===")
+def test_json_cases():
+    """Тестирует случаи из JSON файлов"""
+    print("=== Тест JSON случаев ===")
     
     test_cases = load_test_cases()
     
     for test_name, test_data in test_cases.items():
-        if test_name == "list_workflows":
-            continue
-            
+        print(f"\nТест: {test_name}")
+        
         input_data = test_data.get("input", {})
-        workflow_name = input_data.get("workflow", "default")
-        has_image = "image" in input_data
         
-        print(f"Тест: {test_name} (воркфлоу: {workflow_name})")
-        
-        workflow = get_workflow(workflow_name)
+        # Проверяем, есть ли воркфлоу
+        workflow = input_data.get("workflow")
         if not workflow:
-            print(f"  ✗ Воркфлоу {workflow_name} не найден")
+            print(f"  ⚠ Воркфлоу не найден в тесте")
             continue
+        
+        # Анализируем воркфлоу
+        try:
+            workflow_type = analyze_workflow(workflow)
+            info = get_workflow_info(workflow)
             
-        # Проверяем совместимость режимов
-        if has_image and not workflow.supports_i2v():
-            print(f"  ⚠ Воркфлоу не поддерживает I2V режим")
-        elif not has_image and not workflow.supports_t2v():
-            print(f"  ⚠ Воркфлоу не поддерживает T2V режим")
-        else:
-            print(f"  ✓ Режим совместим")
-        
-        # Проверяем опции
-        options = input_data.get("options", {})
-        default_options = workflow.get_default_options()
-        
-        unknown_options = set(options.keys()) - set(default_options.keys())
-        if unknown_options:
-            print(f"  ⚠ Неизвестные опции: {unknown_options}")
-        else:
-            print(f"  ✓ Все опции поддерживаются")
+            print(f"  Тип: {workflow_type.value}")
+            print(f"  Узлов: {info['node_count']}")
+            print(f"  Ожидаемый выход: {info['expected_output']}")
+            
+            # Проверяем соответствие входных данных требованиям
+            has_prompt = bool(input_data.get("prompt"))
+            has_image = bool(input_data.get("image"))
+            has_video = bool(input_data.get("video"))
+            
+            validation_ok = True
+            
+            if info['supports_prompt'] and workflow_type in [WorkflowType.T2V, WorkflowType.T2I] and not has_prompt:
+                print(f"  ⚠ Воркфлоу поддерживает промпт, но промпт не предоставлен")
+                validation_ok = False
+            
+            if info['requires_image'] and not has_image:
+                print(f"  ⚠ Воркфлоу требует изображение, но оно не предоставлено")
+                validation_ok = False
+            
+            if info['requires_video'] and not has_video:
+                print(f"  ⚠ Воркфлоу требует видео, но оно не предоставлено")
+                validation_ok = False
+            
+            if validation_ok:
+                print(f"  ✓ Входные данные соответствуют требованиям")
+            
+        except Exception as e:
+            print(f"  ✗ Ошибка анализа: {e}")
     
     print()
 
 
 def main():
     """Основная функция тестирования"""
-    print("Тестирование системы воркфлоу RunPod Handler\n")
+    print("Тестирование новой системы JSON воркфлоу\n")
     
     try:
-        test_workflow_loading()
-        test_workflow_creation()
-        test_workflow_validation()
-        test_workflow_compatibility()
+        test_workflow_analysis()
+        test_workflow_processing()
+        test_validation()
+        test_json_cases()
         
         print("=== Все тесты завершены ===")
         
