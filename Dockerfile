@@ -36,11 +36,14 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
 WORKDIR /comfyui
 RUN pip install -r requirements.txt
 
+# Предустанавливаем GitPython ПЕРЕД установкой ComfyUI-Manager
+RUN pip install --upgrade gitpython
+
 # Устанавливаем ComfyUI Manager для управления custom nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
 
-# Предустанавливаем последнюю версию GitPython для ComfyUI-Manager
-RUN pip install --upgrade gitpython
+# Устанавливаем зависимости ComfyUI-Manager
+RUN cd /comfyui/custom_nodes/ComfyUI-Manager && pip install -r requirements.txt || true
 
 # Копируем handler и зависимости
 COPY rp_handler.py /

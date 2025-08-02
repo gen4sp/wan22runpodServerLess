@@ -137,6 +137,27 @@ if torch.cuda.is_available():
     print(f'✅ VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f}GB')
 "
 
+# Проверяем и переустанавливаем GitPython для ComfyUI-Manager
+echo "🔧 Проверка GitPython для ComfyUI-Manager..."
+python -c "import git; print(f'✅ GitPython: {git.__version__}')" 2>/dev/null || {
+    echo "⚠️  Проблема с GitPython, переустанавливаем..."
+    pip install --upgrade --force-reinstall gitpython
+}
+
+# Проверяем ComfyUI-Manager
+echo "🔌 Проверка ComfyUI-Manager..."
+if [ -d "/comfyui/custom_nodes/ComfyUI-Manager" ]; then
+    echo "✅ ComfyUI-Manager найден"
+    # Проверяем что файлы есть
+    if [ -f "/comfyui/custom_nodes/ComfyUI-Manager/__init__.py" ]; then
+        echo "✅ ComfyUI-Manager инициализирован"
+    else
+        echo "⚠️  ComfyUI-Manager установлен некорректно"
+    fi
+else
+    echo "❌ ComfyUI-Manager не найден!"
+fi
+
 # Создаем startup скрипт для ComfyUI с патчем
 cat > /tmp/comfyui_with_patch.py << 'EOF'
 #!/usr/bin/env python3
