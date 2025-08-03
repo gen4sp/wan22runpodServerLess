@@ -113,10 +113,12 @@ export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
 export TORCH_CUDA_ARCH_LIST="9.0"
 
 # Переустанавливаем torchvision если есть проблемы
-python -c "import torchvision" 2>/dev/null || {
+echo "🔧 Проверка torchvision..."
+python -c "import torchvision; print(f'✅ torchvision: {torchvision.__version__}')" 2>/dev/null || {
     echo "⚠️  Проблема с torchvision, переустанавливаем..."
     pip uninstall -y torchvision
     pip install --no-cache-dir torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu128
+    echo "✅ torchvision переустановлен"
 }
 
 # Проверяем CUDA и xformers
@@ -132,6 +134,39 @@ if torch.cuda.is_available():
     print(f'✅ GPU: {torch.cuda.get_device_name(0)}')
     print(f'✅ VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f}GB')
 "
+
+# Проверяем torchaudio mock
+echo "🔧 Проверка torchaudio mock..."
+if [ -f "/test_torchaudio_fix.py" ]; then
+    python /test_torchaudio_fix.py
+else
+    python -c "
+try:
+    import torchaudio
+    print(f'✅ torchaudio импортирован: {torchaudio.__version__}')
+    
+    # Проверяем наличие всех необходимых атрибутов
+    if hasattr(torchaudio, 'lib'):
+        print('✅ torchaudio.lib найден')
+    else:
+        print('❌ torchaudio.lib отсутствует')
+        
+    if hasattr(torchaudio, 'transforms'):
+        print('✅ torchaudio.transforms найден')
+    else:
+        print('❌ torchaudio.transforms отсутствует')
+        
+    if hasattr(torchaudio, 'functional'):
+        print('✅ torchaudio.functional найден')
+    else:
+        print('❌ torchaudio.functional отсутствует')
+        
+except Exception as e:
+    print(f'❌ Ошибка импорта torchaudio: {e}')
+    import traceback
+    traceback.print_exc()
+"
+fi
 
 # Запускаем ComfyUI в фоне
 echo "🎨 Запуск ComfyUI..."

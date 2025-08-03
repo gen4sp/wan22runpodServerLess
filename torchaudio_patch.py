@@ -10,12 +10,17 @@ torchaudio_mock = '''
 """Mock torchaudio module для ComfyUI"""
 
 __version__ = "2.1.0+mock"
+__file__ = "/mock/torchaudio/__init__.py"
 
 def load(*args, **kwargs):
     raise RuntimeError("torchaudio отключен в этой сборке")
 
 def save(*args, **kwargs):
     raise RuntimeError("torchaudio отключен в этой сборке")
+
+class lib:
+    """Mock lib module"""
+    pass
 
 class transforms:
     @staticmethod
