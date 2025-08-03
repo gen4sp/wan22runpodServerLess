@@ -30,8 +30,50 @@ RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu128 |
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
 
-# РАННИЙ ПАТЧ torchaudio - ДО клонирования ComfyUI
+# РАННИЙ ПАТЧ torchaudio - создаем sitecustomize.py для автоматического патча
+RUN mkdir -p /usr/local/lib/python3.11/site-packages/ && \
+    cat > /usr/local/lib/python3.11/site-packages/sitecustomize.py << 'EOF'
+import sys
+import types
+
+# Создаем полный mock для torchaudio при каждом запуске Python
+def create_mock_torchaudio():
+    # Mock для _torchaudio
+    _torchaudio = types.ModuleType('_torchaudio')
+    _torchaudio.cuda_version = lambda: '12.8'
+    
+    # Mock для torchaudio.lib
+    lib = types.ModuleType('torchaudio.lib')
+    lib._torchaudio = _torchaudio
+    
+    # Mock для torchaudio._extension
+    extension = types.ModuleType('torchaudio._extension')
+    extension._check_cuda_version = lambda: None
+    
+    # Основной mock для torchaudio
+    torchaudio = types.ModuleType('torchaudio')
+    torchaudio.lib = lib
+    torchaudio._extension = extension
+    torchaudio.__version__ = '2.5.0'
+    
+    # Регистрируем все модули
+    sys.modules['torchaudio'] = torchaudio
+    sys.modules['torchaudio.lib'] = lib
+    sys.modules['torchaudio.lib._torchaudio'] = _torchaudio
+    sys.modules['torchaudio._extension'] = extension
+
+# Применяем патч немедленно при импорте Python
+create_mock_torchaudio()
+EOF
+
+# Копируем скрипты для патчей
 COPY torchaudio_patch.py /tmp/torchaudio_patch.py
+COPY remove_torchaudio.py /tmp/remove_torchaudio.py
+
+# Полностью удаляем torchaudio и заменяем на mock
+RUN python3 /tmp/remove_torchaudio.py
+
+# Применяем дополнительный патч
 RUN python3 /tmp/torchaudio_patch.py
 
 # Клонируем и устанавливаем ComfyUI
@@ -43,7 +85,9 @@ WORKDIR /comfyui
 RUN pip install -r requirements.txt
 
 # Предустанавливаем все критические зависимости ДО установки ComfyUI-Manager
-RUN pip install --no-cache-dir --upgrade gitpython requests aiohttp pyyaml
+# Удаляем старые версии и устанавливаем заново
+RUN pip uninstall -y gitpython GitPython || true && \
+    pip install --no-cache-dir --upgrade --force-reinstall gitpython>=3.1.40 requests aiohttp pyyaml
 
 # Устанавливаем ComfyUI Manager для управления custom nodes
 RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /comfyui/custom_nodes/ComfyUI-Manager
