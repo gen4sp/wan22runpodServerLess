@@ -31,7 +31,7 @@ RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu128 |
 RUN pip install flash-attn --no-build-isolation
 
 # РАННИЙ ПАТЧ torchaudio - создаем sitecustomize.py для автоматического патча
-RUN mkdir -p /usr/local/lib/python3.11/dist-packages/ && \
+RUN mkdir -p /usr/local/lib/python3.11/dist-packages && \
     cat > /usr/local/lib/python3.11/dist-packages/sitecustomize.py << 'EOF'
 import sys
 import types
