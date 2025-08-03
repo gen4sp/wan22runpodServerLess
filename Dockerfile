@@ -30,41 +30,9 @@ RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu128 |
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
 
-# РАННИЙ ПАТЧ torchaudio - создаем sitecustomize.py для автоматического патча
-RUN mkdir -p /usr/local/lib/python3.11/dist-packages && \
-    cat > /usr/local/lib/python3.11/dist-packages/sitecustomize.py << 'EOF'
-import sys
-import types
-
-# Создаем полный mock для torchaudio при каждом запуске Python
-def create_mock_torchaudio():
-    # Mock для _torchaudio
-    _torchaudio = types.ModuleType('_torchaudio')
-    _torchaudio.cuda_version = lambda: '12.8'
-    
-    # Mock для torchaudio.lib
-    lib = types.ModuleType('torchaudio.lib')
-    lib._torchaudio = _torchaudio
-    
-    # Mock для torchaudio._extension
-    extension = types.ModuleType('torchaudio._extension')
-    extension._check_cuda_version = lambda: None
-    
-    # Основной mock для torchaudio
-    torchaudio = types.ModuleType('torchaudio')
-    torchaudio.lib = lib
-    torchaudio._extension = extension
-    torchaudio.__version__ = '2.5.0'
-    
-    # Регистрируем все модули
-    sys.modules['torchaudio'] = torchaudio
-    sys.modules['torchaudio.lib'] = lib
-    sys.modules['torchaudio.lib._torchaudio'] = _torchaudio
-    sys.modules['torchaudio._extension'] = extension
-
-# Применяем патч немедленно при импорте Python
-create_mock_torchaudio()
-EOF
+# РАННИЙ ПАТЧ torchaudio - копируем готовый sitecustomize.py для автоматического патча
+RUN mkdir -p /usr/local/lib/python3.11/dist-packages
+COPY sitecustomize.py /usr/local/lib/python3.11/dist-packages/sitecustomize.py
 
 # Копируем скрипты для патчей
 COPY torchaudio_patch.py /tmp/torchaudio_patch.py
