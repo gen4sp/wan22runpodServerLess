@@ -4,7 +4,9 @@ ENV CM_NETWORK_MODE=offline \
     COMFYUI_DISABLE_VERSION_CHECK=1 \
     TORCH_AUDIO_BACKEND=soundfile \
     TORCHAUDIO_BACKEND=soundfile \
-    DISABLE_TORCHAUDIO_CUDA_CHECK=1
+    DISABLE_TORCHAUDIO_CUDA_CHECK=1 \
+    CM_DISABLE_TORCHAUDIO=1 \
+    PYTHONDONTWRITEBYTECODE=1
 # Обновляем систему и устанавливаем необходимые зависимости
 RUN apt-get update && apt-get install -y \
     ffmpeg \

@@ -119,9 +119,65 @@ python -c "import torchvision" 2>/dev/null || {
     pip install --no-cache-dir torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu128
 }
 
-# Фикс для torchaudio циклического импорта
-echo "🔧 Применение фикса для torchaudio циклического импорта..."
-python3 /tmp/torchaudio_patch.py 2>/dev/null || echo "⚠️  Не удалось применить torchaudio патч"
+# Создаем sitecustomize.py для РАННЕГО применения torchaudio патча
+echo "🔧 Создание раннего torchaudio патча через sitecustomize.py..."
+cat > /usr/local/lib/python3.11/site-packages/sitecustomize.py << 'EOF'
+# Ранний патч для torchaudio - выполняется при любом запуске Python
+import os
+import sys
+import types
+
+# Устанавливаем переменные окружения
+os.environ['TORCH_AUDIO_BACKEND'] = 'soundfile'
+os.environ['TORCHAUDIO_BACKEND'] = 'soundfile' 
+os.environ['DISABLE_TORCHAUDIO_CUDA_CHECK'] = '1'
+
+def create_mock_torchaudio():
+    _torchaudio_module = types.ModuleType('_torchaudio')
+    _torchaudio_module.cuda_version = lambda: '12.8'
+    
+    utils_module = types.ModuleType('torchaudio._extension.utils')
+    utils_module._check_cuda_version = lambda: None
+    
+    extension_module = types.ModuleType('torchaudio._extension')
+    extension_module.utils = utils_module
+    extension_module._check_cuda_version = lambda: None
+    
+    lib_module = types.ModuleType('torchaudio.lib')
+    lib_module._torchaudio = _torchaudio_module
+
+    torchaudio_module = types.ModuleType('torchaudio')
+    torchaudio_module.lib = lib_module
+    torchaudio_module._extension = extension_module
+    torchaudio_module.__version__ = '2.5.0'
+    
+    sys.modules['torchaudio._extension.utils'] = utils_module
+    sys.modules['torchaudio._extension'] = extension_module
+    sys.modules['torchaudio.lib._torchaudio'] = _torchaudio_module
+    sys.modules['torchaudio.lib'] = lib_module
+    sys.modules['torchaudio'] = torchaudio_module
+    
+    return torchaudio_module
+
+# Блокировщик импорта torchaudio
+class TorchaudioBlocker:
+    def find_spec(self, fullname, path, target=None):
+        if fullname == 'torchaudio' or fullname.startswith('torchaudio.'):
+            if fullname not in sys.modules:
+                if fullname == 'torchaudio':
+                    create_mock_torchaudio()
+            return None
+        return None
+
+# Устанавливаем блокировщик в начало meta_path
+sys.meta_path.insert(0, TorchaudioBlocker())
+
+print('🚫 РАННИЙ torchaudio блокировщик активирован')
+EOF
+
+# Дополнительно применяем обычный патч
+echo "🔧 Применение дополнительного torchaudio патча..."
+python3 /tmp/torchaudio_patch.py 2>/dev/null || echo "⚠️  Не удалось применить дополнительный torchaudio патч"
 
 # Проверяем CUDA и xformers
 echo "🧪 Проверка CUDA и xformers..."
