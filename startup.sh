@@ -121,8 +121,8 @@ python -c "import torchvision" 2>/dev/null || {
 
 # Создаем ранний torchaudio патч через sitecustomize.py
 echo "🔧 Создание раннего torchaudio патча через sitecustomize.py..."
-mkdir -p /usr/local/lib/python3.11/site-packages/
-cat > /usr/local/lib/python3.11/site-packages/sitecustomize.py << 'EOF'
+mkdir -p /usr/local/lib/python3.11/dist-packages/
+cat > /usr/local/lib/python3.11/dist-packages/sitecustomize.py << 'EOF'
 import sys
 import types
 
