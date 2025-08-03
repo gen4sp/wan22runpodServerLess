@@ -5,6 +5,47 @@
 
 echo "🚀 Запуск WAN 2.2 ServerLess Worker..."
 
+# 🔍 ДИАГНОСТИКА TORCHAUDIO ПАТЧЕЙ
+echo "🔍 Проверка состояния torchaudio патчей..."
+
+# Проверяем что настоящий torchaudio удален
+if find /usr/local/lib/python3.11 -name "*torchaudio*" -type f | grep -v "dist-packages/torchaudio" | head -1; then
+    echo "⚠️  Найдены остатки настоящего torchaudio!"
+    find /usr/local/lib/python3.11 -name "*torchaudio*" -type f | head -5
+else
+    echo "✅ Настоящий torchaudio полностью удален"
+fi
+
+# Проверяем наш mock torchaudio
+if [ -f "/usr/local/lib/python3.11/dist-packages/torchaudio/__init__.py" ]; then
+    echo "✅ Mock torchaudio найден"
+else
+    echo "❌ Mock torchaudio НЕ найден!"
+fi
+
+# Проверяем sitecustomize.py
+if [ -f "/usr/local/lib/python3.11/dist-packages/sitecustomize.py" ]; then
+    echo "✅ sitecustomize.py найден"
+else
+    echo "❌ sitecustomize.py НЕ найден!"
+fi
+
+# Тестируем импорт torchaudio
+echo "🧪 Тестируем импорт torchaudio..."
+python3 -c "
+try:
+    import torchaudio
+    print(f'✅ torchaudio импорт успешен: версия {torchaudio.__version__}')
+    print(f'   torchaudio.lib: {hasattr(torchaudio, \"lib\")}')
+    print(f'   torchaudio.lib._torchaudio: {hasattr(torchaudio.lib, \"_torchaudio\") if hasattr(torchaudio, \"lib\") else False}')
+    if hasattr(torchaudio, 'lib') and hasattr(torchaudio.lib, '_torchaudio'):
+        print(f'   cuda_version(): {torchaudio.lib._torchaudio.cuda_version()}')
+except Exception as e:
+    print(f'❌ Ошибка импорта torchaudio: {e}')
+    import sys
+    print(f'   sys.modules содержит torchaudio: {\"torchaudio\" in sys.modules}')
+" || echo "❌ Критическая ошибка при тестировании torchaudio"
+
 # Создаем символические ссылки для volume (только для моделей!)
 echo "📁 Настройка volume..."
 

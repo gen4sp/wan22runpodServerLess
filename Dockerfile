@@ -30,19 +30,30 @@ RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu128 |
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
 
-# РАННИЙ ПАТЧ torchaudio - копируем готовый sitecustomize.py для автоматического патча
-RUN mkdir -p /usr/local/lib/python3.11/dist-packages
-COPY sitecustomize.py /usr/local/lib/python3.11/dist-packages/sitecustomize.py
-
+# 🚨 КРИТИЧЕСКИ ВАЖНО: ПОЛНОСТЬЮ УДАЛЯЕМ TORCHAUDIO ДО УСТАНОВКИ COMFYUI 🚨
 # Копируем скрипты для патчей
 COPY torchaudio_patch.py /tmp/torchaudio_patch.py
 COPY remove_torchaudio.py /tmp/remove_torchaudio.py
 
-# Полностью удаляем torchaudio и заменяем на mock
+# 1. Удаляем torchaudio через pip
+RUN pip uninstall -y torchaudio 2>/dev/null || true
+
+# 2. Полностью удаляем все файлы torchaudio из системы
+RUN find /usr/local/lib/python3.11 -name "*torchaudio*" -type d -exec rm -rf {} + 2>/dev/null || true
+RUN find /usr/local/lib/python3.11 -name "*torchaudio*" -type f -delete 2>/dev/null || true
+
+# 3. Применяем наш remove_torchaudio.py для создания mock
 RUN python3 /tmp/remove_torchaudio.py
 
-# Применяем дополнительный патч
+# 4. РАННИЙ ПАТЧ через sitecustomize.py - копируем ПОСЛЕ удаления настоящего torchaudio
+RUN mkdir -p /usr/local/lib/python3.11/dist-packages
+COPY sitecustomize.py /usr/local/lib/python3.11/dist-packages/sitecustomize.py
+
+# 5. Применяем дополнительный патч
 RUN python3 /tmp/torchaudio_patch.py
+
+# 6. Проверяем что torchaudio теперь mock
+RUN python3 -c "import torchaudio; print(f'✅ torchaudio mock работает: {torchaudio.__version__}')" || echo "❌ torchaudio mock не работает"
 
 # Клонируем и устанавливаем ComfyUI
 WORKDIR /
