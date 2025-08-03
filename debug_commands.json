@@ -1,0 +1,22 @@
+{
+    "debug_system": {
+        "input": {
+            "action": "debug_system"
+        }
+    },
+    "health_check": {
+        "input": {
+            "action": "health_check"
+        }
+    },
+    "ping": {
+        "input": {
+            "action": "ping"
+        }
+    },
+    "restart_comfyui": {
+        "input": {
+            "action": "restart_comfyui"
+        }
+    }
+}

@@ -228,11 +228,12 @@ cd /comfyui
 python3 /tmp/torchaudio_patch.py 2>/dev/null || true
 
 # Запускаем ComfyUI и перенаправляем вывод в лог
-python main.py --listen 0.0.0.0 --port 8188 > /tmp/comfyui.log 2>&1 &
+echo "🚀 Запуск ComfyUI процесса..."
+python main.py --listen 0.0.0.0 --port 8188 --disable-auto-launch > /tmp/comfyui.log 2>&1 &
 COMFY_PID=$!
 
 # Даем время на запуск
-sleep 2
+sleep 3
 
 # Проверяем что процесс запустился
 if ! kill -0 $COMFY_PID 2>/dev/null; then
@@ -240,14 +241,27 @@ if ! kill -0 $COMFY_PID 2>/dev/null; then
     echo "📋 Последние строки лога:"
     tail -50 /tmp/comfyui.log
     
+    echo "🔍 Диагностика проблемы запуска:"
+    echo "   - Проверяем Python процессы:"
+    ps aux | grep python | grep -v grep
+    echo "   - Проверяем порты:"
+    netstat -tlnp | grep 8188 || echo "     Порт 8188 не занят"
+    echo "   - Проверяем память:"
+    free -h
+    echo "   - Проверяем GPU:"
+    nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv,noheader,nounits || echo "     nvidia-smi недоступен"
+    
     # Пробуем запустить еще раз с дополнительным патчем
     echo "🔧 Применение дополнительного патча и повторный запуск..."
     python3 /tmp/torchaudio_patch.py
     echo "✅ АГРЕССИВНЫЙ torchaudio патч применен"
     
-    python main.py --listen 0.0.0.0 --port 8188 > /tmp/comfyui.log 2>&1 &
+    # Очищаем старый лог и запускаем заново
+    > /tmp/comfyui.log
+    python main.py --listen 0.0.0.0 --port 8188 --disable-auto-launch > /tmp/comfyui.log 2>&1 &
     COMFY_PID=$!
     echo "✅ ComfyUI запущен с PID: $COMFY_PID"
+    sleep 3
 else
     echo "✅ ComfyUI запущен с PID: $COMFY_PID"
 fi
@@ -260,14 +274,45 @@ for i in {1..60}; do
         break
     fi
     echo "   Попытка $i/60..."
+    
+    # Каждые 10 попыток показываем диагностику
+    if [ $((i % 10)) -eq 0 ]; then
+        echo "🔍 Диагностика после $i попыток:"
+        echo "   - Процесс ComfyUI:"
+        if kill -0 $COMFY_PID 2>/dev/null; then
+            echo "     ✅ Процесс $COMFY_PID активен"
+            ps -p $COMFY_PID -o pid,pcpu,pmem,etime,cmd --no-headers || echo "     ⚠️ Не удается получить детали процесса"
+        else
+            echo "     ❌ Процесс $COMFY_PID не найден"
+        fi
+        echo "   - Порт 8188:"
+        netstat -tlnp | grep 8188 || echo "     ❌ Порт 8188 не слушается"
+        echo "   - Последние строки лога ComfyUI:"
+        tail -3 /tmp/comfyui.log 2>/dev/null || echo "     ⚠️ Лог недоступен"
+    fi
+    
     sleep 5
 done
 
 # Проверяем что ComfyUI запустился
 if ! curl -s http://127.0.0.1:8188/system_stats >/dev/null 2>&1; then
-    echo "❌ ComfyUI не смог запуститься!"
-    echo "📋 Логи ComfyUI:"
-    tail -50 /comfyui/comfyui.log 2>/dev/null || echo "Логи недоступны"
+    echo "❌ ComfyUI не смог запуститься за 300 секунд!"
+    echo "📋 Финальная диагностика:"
+    echo "   - Статус процесса $COMFY_PID:"
+    if kill -0 $COMFY_PID 2>/dev/null; then
+        echo "     ✅ Процесс активен"
+        ps -p $COMFY_PID -o pid,pcpu,pmem,etime,stat,cmd --no-headers
+    else
+        echo "     ❌ Процесс завершился"
+    fi
+    echo "   - Порты:"
+    netstat -tlnp | grep 8188 || echo "     Порт 8188 не слушается"
+    echo "   - Полные логи ComfyUI:"
+    cat /tmp/comfyui.log 2>/dev/null || echo "     Логи недоступны"
+    echo "   - Системная память:"
+    free -h
+    echo "   - GPU память:"
+    nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits || echo "     nvidia-smi недоступен"
     exit 1
 fi
 
