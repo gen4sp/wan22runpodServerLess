@@ -54,13 +54,7 @@ COPY sitecustomize.py /usr/local/lib/python3.11/dist-packages/sitecustomize.py
 RUN python3 /tmp/torchaudio_patch.py
 
 # 6. Проверяем что torchaudio теперь mock
-RUN python3 -c "
-import torchaudio
-print(f'✅ torchaudio mock работает: {torchaudio.__version__}')
-print(f'✅ torchaudio.lib: {hasattr(torchaudio, \"lib\")}')
-print(f'✅ torchaudio.transforms: {hasattr(torchaudio, \"transforms\")}')
-print(f'✅ torchaudio.functional: {hasattr(torchaudio, \"functional\")}')
-" || echo "❌ torchaudio mock не работает"
+RUN python3 -c "import torchaudio; print(f'✅ torchaudio mock работает: {torchaudio.__version__}'); print(f'✅ torchaudio.lib: {hasattr(torchaudio, \"lib\")}'); print(f'✅ torchaudio.transforms: {hasattr(torchaudio, \"transforms\")}'); print(f'✅ torchaudio.functional: {hasattr(torchaudio, \"functional\")}')" || echo "❌ torchaudio mock не работает"
 
 # Клонируем и устанавливаем ComfyUI
 WORKDIR /
