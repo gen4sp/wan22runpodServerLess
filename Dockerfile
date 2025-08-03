@@ -30,6 +30,10 @@ RUN pip install -U xformers --index-url https://download.pytorch.org/whl/cu128 |
 # Устанавливаем flash-attention для дополнительной оптимизации
 RUN pip install flash-attn --no-build-isolation
 
+# РАННИЙ ПАТЧ torchaudio - ДО клонирования ComfyUI
+COPY torchaudio_patch.py /tmp/torchaudio_patch.py
+RUN python3 /tmp/torchaudio_patch.py
+
 # Клонируем и устанавливаем ComfyUI
 WORKDIR /
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui
@@ -87,10 +91,9 @@ ENV TORCH_CUDA_ARCH_LIST="9.0"
 # Устанавливаем рабочую директорию
 WORKDIR /
 
-# Копируем startup скрипт, диагностику и патчи
+# Копируем startup скрипт и диагностику
 COPY startup.sh /startup.sh
 COPY diagnose_volume.sh /diagnose_volume.sh
-COPY torchaudio_patch.py /tmp/torchaudio_patch.py
 RUN chmod +x /startup.sh /diagnose_volume.sh
 
 # Команда запуска через startup скрипт

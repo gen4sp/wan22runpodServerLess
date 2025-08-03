@@ -119,65 +119,8 @@ python -c "import torchvision" 2>/dev/null || {
     pip install --no-cache-dir torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu128
 }
 
-# Создаем sitecustomize.py для РАННЕГО применения torchaudio патча
-echo "🔧 Создание раннего torchaudio патча через sitecustomize.py..."
-cat > /usr/local/lib/python3.11/site-packages/sitecustomize.py << 'EOF'
-# Ранний патч для torchaudio - выполняется при любом запуске Python
-import os
-import sys
-import types
-
-# Устанавливаем переменные окружения
-os.environ['TORCH_AUDIO_BACKEND'] = 'soundfile'
-os.environ['TORCHAUDIO_BACKEND'] = 'soundfile' 
-os.environ['DISABLE_TORCHAUDIO_CUDA_CHECK'] = '1'
-
-def create_mock_torchaudio():
-    _torchaudio_module = types.ModuleType('_torchaudio')
-    _torchaudio_module.cuda_version = lambda: '12.8'
-    
-    utils_module = types.ModuleType('torchaudio._extension.utils')
-    utils_module._check_cuda_version = lambda: None
-    
-    extension_module = types.ModuleType('torchaudio._extension')
-    extension_module.utils = utils_module
-    extension_module._check_cuda_version = lambda: None
-    
-    lib_module = types.ModuleType('torchaudio.lib')
-    lib_module._torchaudio = _torchaudio_module
-
-    torchaudio_module = types.ModuleType('torchaudio')
-    torchaudio_module.lib = lib_module
-    torchaudio_module._extension = extension_module
-    torchaudio_module.__version__ = '2.5.0'
-    
-    sys.modules['torchaudio._extension.utils'] = utils_module
-    sys.modules['torchaudio._extension'] = extension_module
-    sys.modules['torchaudio.lib._torchaudio'] = _torchaudio_module
-    sys.modules['torchaudio.lib'] = lib_module
-    sys.modules['torchaudio'] = torchaudio_module
-    
-    return torchaudio_module
-
-# Блокировщик импорта torchaudio
-class TorchaudioBlocker:
-    def find_spec(self, fullname, path, target=None):
-        if fullname == 'torchaudio' or fullname.startswith('torchaudio.'):
-            if fullname not in sys.modules:
-                if fullname == 'torchaudio':
-                    create_mock_torchaudio()
-            return None
-        return None
-
-# Устанавливаем блокировщик в начало meta_path
-sys.meta_path.insert(0, TorchaudioBlocker())
-
-print('🚫 РАННИЙ torchaudio блокировщик активирован')
-EOF
-
-# Дополнительно применяем обычный патч
-echo "🔧 Применение дополнительного torchaudio патча..."
-python3 /tmp/torchaudio_patch.py 2>/dev/null || echo "⚠️  Не удалось применить дополнительный torchaudio патч"
+# torchaudio патч уже применен в Dockerfile
+echo "✅ torchaudio патч применен на этапе сборки"
 
 # Проверяем CUDA и xformers
 echo "🧪 Проверка CUDA и xformers..."
@@ -235,49 +178,11 @@ else
     echo "❌ ComfyUI-Manager не найден!"
 fi
 
-# Создаем startup скрипт для ComfyUI с патчем
-cat > /tmp/comfyui_with_patch.py << 'EOF'
-#!/usr/bin/env python3
-import sys
-import os
-import subprocess
-
-# Применяем torchaudio patch
-try:
-    exec(open('/tmp/torchaudio_patch.py').read())
-except Exception as e:
-    print(f'⚠️  Ошибка применения torchaudio патча: {e}')
-
-# Меняем рабочую директорию на ComfyUI  
-os.chdir('/comfyui')
-
-# Запускаем ComfyUI через subprocess с правильными путями
-try:
-    # Запускаем в фоне, не блокируя выполнение
-    process = subprocess.Popen([sys.executable, 'main.py', '--listen', '0.0.0.0', '--port', '8188'])
-    print(f'✅ ComfyUI запущен с PID: {process.pid}')
-    # Позволяем процессу работать, не дожидаясь завершения
-    process.wait()
-except Exception as e:
-    print(f'❌ Ошибка запуска ComfyUI: {e}')
-    exit(1)
-EOF
-
-# Запускаем ComfyUI в фоне с патчем для torchaudio
-echo "🎨 Запуск ComfyUI с патчем для torchaudio..."
+# Запускаем ComfyUI
+echo "🎨 Запуск ComfyUI..."
 cd /comfyui
-
-# Пробуем сначала с патчем
-python /tmp/comfyui_with_patch.py &
+python main.py --listen 0.0.0.0 --port 8188 &
 COMFY_PID=$!
-
-# Проверяем что процесс запустился
-sleep 2
-if ! kill -0 $COMFY_PID 2>/dev/null; then
-    echo "⚠️  ComfyUI с патчем не запустился, пробуем без патча..."
-    python main.py --listen 0.0.0.0 --port 8188 &
-    COMFY_PID=$!
-fi
 
 # Ждем запуска ComfyUI
 echo "⏳ Ожидание готовности ComfyUI..."
